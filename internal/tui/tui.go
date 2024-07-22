@@ -1,4 +1,4 @@
-package prologue
+package tui
 
 import (
 	"fmt"
@@ -198,8 +198,8 @@ func (m *model) resetSpinner() {
 // ---
 
 func Start() {
-	// p := tea.NewProgram(newModel(), tea.WithAltScreen())
-	p := tea.NewProgram(newModel())
+	p := tea.NewProgram(newModel(), tea.WithAltScreen())
+	// p := tea.NewProgram(newModel())
 
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)

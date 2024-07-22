@@ -1,8 +1,8 @@
 package main
 
-import "explore/internal/tui/prologue"
+import "explore/internal/tui"
 
 
 func main() {
-    prologue.Start()
+    tui.Start()
 }
