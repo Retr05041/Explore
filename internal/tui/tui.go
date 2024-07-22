@@ -2,12 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"log"
-    "strings"
+	"strings"
 
-	"github.com/charmbracelet/bubbles/spinner"
-    "github.com/charmbracelet/bubbles/textarea"
-    "github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -16,33 +17,30 @@ import (
 type sessionState uint
 type errMsg error
 
+// list types
+type item string
+
 const (
-	messageView   sessionState = iota
-	spinnerView
+	inventoryHeight              = 10
+	messageView     sessionState = iota
+	listView
 )
 
 var (
-	// Available spinners
-	spinners = []spinner.Spinner{
-		spinner.Line,
-		spinner.Dot,
-		spinner.MiniDot,
-		spinner.Jump,
-		spinner.Pulse,
-		spinner.Points,
-		spinner.Globe,
-		spinner.Moon,
-		spinner.Monkey,
-	}
+	// Inventory
+	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
+	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
+	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 
-    // unfocused model
-	modelStyle = lipgloss.NewStyle().
-			Width(30). // Be sure to change the values for the textarea and viewport in the message model if you change these
-			Height(10).
-			Align(lipgloss.Left, lipgloss.Bottom). // Sets alignment of content within the model
-			BorderStyle(lipgloss.HiddenBorder())
+	// unfocused model
+	unfocusedModelStyle = lipgloss.NewStyle().
+				Width(30). // Be sure to change the values for the textarea and viewport in the message model if you change these
+				Height(10).
+				Align(lipgloss.Left, lipgloss.Bottom). // Sets alignment of content within the model
+				BorderStyle(lipgloss.HiddenBorder())
 
-    // Focused model
+		// Focused model
 	focusedModelStyle = lipgloss.NewStyle().
 				Width(30).
 				Height(10).
@@ -50,61 +48,94 @@ var (
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("69"))
 
-	spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
-
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 type model struct {
-	state   sessionState
+	state sessionState
 
-    // Spinner model attributes
-	spinner spinner.Model
-	index   int
+	// List model attributes
+	inventory list.Model
+	choice    string
 
-    // Message model attributes
-    viewport    viewport.Model
+	// Message model attributes
+	viewport    viewport.Model
 	messages    []string
 	textarea    textarea.Model
 	senderStyle lipgloss.Style
 	err         error
+}
 
+func (i item) FilterValue() string { return "" }
+
+type itemDelegate struct{}
+
+func (d itemDelegate) Height() int                             { return 1 }
+func (d itemDelegate) Spacing() int                            { return 0 }
+func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(item)
+	if !ok {
+		return
+	}
+
+	str := fmt.Sprintf("%d. %s", index+1, i)
+
+	fn := itemStyle.Render
+	if index == m.Index() {
+		fn = func(s ...string) string {
+			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+		}
+	}
+
+	fmt.Fprint(w, fn(str))
 }
 
 func newModel() model {
-    ta := textarea.New()
+	// Messages
+	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
-
 	ta.Prompt = "┃ "
-	ta.CharLimit = 15 // Needs editing
-
-	ta.SetWidth(30) // Same as {model}Style width
-	ta.SetHeight(1) // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
-
-	// Remove cursor line styling
-	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-
+	ta.CharLimit = 15                                // Needs editing
+	ta.SetWidth(30)                                  // Same as {model}Style width
+	ta.SetHeight(1)                                  // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling
 	ta.ShowLineNumbers = false
-
 	vp := viewport.New(30, 10)
-
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
-    return model {
-            state: messageView,
-            spinner: spinner.New(),
-            textarea:    ta,
-            messages:    []string{},
-            viewport:    vp,
-            senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-            err:         nil,
-        }
+	// Inventory
+	items := []list.Item{
+		item("Ramen"),
+		item("Tomato Soup"),
+		item("Hamburgers"),
+		item("Cheeseburgers"),
+		item("Currywurst"),
+	}
+	const defaultWidth = 20
+	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
+	l.Title = "Inventory"
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = titleStyle
+	l.Styles.PaginationStyle = paginationStyle
+	l.Styles.HelpStyle = helpStyle
+
+	return model{
+		state:       messageView,
+		inventory:   l,
+		textarea:    ta,
+		messages:    []string{},
+		viewport:    vp,
+		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		err:         nil,
+	}
 }
 
+// Init commands
 func (m model) Init() tea.Cmd {
-	// start the timer and spinner on program start
-	return tea.Batch(textarea.Blink, m.spinner.Tick)
+	return tea.Batch(textarea.Blink)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -113,32 +144,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
+		// If the given command is a key
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "tab":
 			if m.state == messageView {
-				m.state = spinnerView
+				m.state = listView
 			} else {
 				m.state = messageView
 			}
-		case "n":
-			if m.state == spinnerView {
-				m.Next()
-				m.resetSpinner()
-				cmds = append(cmds, m.spinner.Tick)
+		case "enter":
+			if m.state == listView {
+				i, ok := m.inventory.SelectedItem().(item)
+				if ok {
+					m.choice = string(i)
+				}
+			} else {
+				m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
+				m.viewport.SetContent(strings.Join(m.messages, "\n"))
+				m.textarea.Reset()
+				m.viewport.GotoBottom()
 			}
-        case "enter":
-            m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.textarea.Reset()
-			m.viewport.GotoBottom()
 		}
 
+		// Update whichever model is focused
 		switch m.state {
-		// update whichever model is focused
-		case spinnerView:
-			m.spinner, cmd = m.spinner.Update(msg)
+		case listView:
+			m.inventory, cmd = m.inventory.Update(msg)
 			cmds = append(cmds, cmd)
 		default:
 			m.textarea, cmd = m.textarea.Update(msg)
@@ -146,56 +179,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport, cmd = m.viewport.Update(msg)
 			cmds = append(cmds, cmd)
 		}
-	case spinner.TickMsg:
-		m.spinner, cmd = m.spinner.Update(msg)
-		cmds = append(cmds, cmd)
 	}
 	return m, tea.Batch(cmds...)
 }
 
 // For Viewing two things at once when entering the View() function
 func (m model) viewMessage() string {
-    return fmt.Sprintf(
-            "%s\n%s",
-            m.viewport.View(),
-            m.textarea.View(), // This is what causes the height increase I believe...
-        )
+	return fmt.Sprintf(
+		"%s\n%s",
+		m.viewport.View(),
+		m.textarea.View(), // This is what causes the height increase I believe...
+	)
 }
 
 func (m model) View() string {
 	var s string
-	model := m.currentFocusedModel()
-	if m.state == messageView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage())), modelStyle.Render(m.spinner.View())) // viewMessage is needed so we can work with this line here nicely
+	if m.state == listView {
+		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(m.inventory.View()), unfocusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage())))
 	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, modelStyle.Render(fmt.Sprintf("%4s", m.viewMessage())), focusedModelStyle.Render(m.spinner.View()))
+		s += lipgloss.JoinHorizontal(lipgloss.Top, unfocusedModelStyle.Render(m.inventory.View()), focusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage()))) // viewMessage is needed so we can work with this line here nicely
 	}
-	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • n: new %s • q: exit\n", model))
+	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • q: exit\n"))
 	return s
 }
-
-func (m model) currentFocusedModel() string {
-	if m.state == messageView {
-		return "message"
-	}
-	return "spinner"
-}
-
-// Spinner BS
-func (m *model) Next() {
-	if m.index == len(spinners)-1 {
-		m.index = 0
-	} else {
-		m.index++
-	}
-}
-
-func (m *model) resetSpinner() {
-	m.spinner = spinner.New()
-	m.spinner.Style = spinnerStyle
-	m.spinner.Spinner = spinners[m.index]
-}
-// ---
 
 func Start() {
 	p := tea.NewProgram(newModel(), tea.WithAltScreen())
