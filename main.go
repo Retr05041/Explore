@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
     "explore/internal/commander"
+    "explore/internal/tui"
 
 	"github.com/spf13/viper"
 )
@@ -28,5 +29,5 @@ func main() {
     commander.Init(currentMap)
 
     // Run tui once commander is setup
-    // tui.Start()
+    tui.Start()
 }
