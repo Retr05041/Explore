@@ -1,5 +1,20 @@
 package commander
 
+import (
+	"fmt"
+
+	"github.com/spf13/viper"
+)
+
+var (
+    currentMap *viper.Viper
+)
+
+func Init(currMap *viper.Viper) {
+    currentMap := currMap
+    fmt.Println(currentMap.GetString("0.name"))
+}
+
 func isGameCommand(cmd string) bool {
     return false
 }
