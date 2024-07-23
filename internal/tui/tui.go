@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"explore/internal/commander"
 	"fmt"
 	"io"
 	"log"
@@ -162,6 +163,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else {
 				m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
+                m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.GameCommand(m.textarea.Value()))
 				m.viewport.SetContent(strings.Join(m.messages, "\n"))
 				m.textarea.Reset()
 				m.viewport.GotoBottom()
