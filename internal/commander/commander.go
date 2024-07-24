@@ -1,30 +1,54 @@
 package commander
 
 import (
-	"fmt"
-	"slices"
-	"strings"
+    "strings"
 
-	"github.com/spf13/viper"
+    "github.com/spf13/viper"
 )
 
 var (
-    currentMap *viper.Viper
-    commands = []string { "get", "look", "go" }
+    currentMap  map[string]interface{}
+    currentRoom map[string]interface{}
+    directions = []string { "north", "east", "south", "west" }
 )
 
 func Init(currMap *viper.Viper) {
-    currentMap := currMap
-    fmt.Println(currentMap.GetString("0.name"))
+    err := currMap.Unmarshal(&currentMap)
+    if err != nil {
+        panic(err)
+    }
+    loadRoom("start")
 }
 
-func isGameCommand(cmd string) bool {
-    splitCmd := strings.Split(cmd, " ")
-    if len(splitCmd) == 1 { return false }
-    return slices.Contains(commands, splitCmd[0])
+func directionChecker(direction string) bool {
+    for _, token := range directions {
+        if strings.Contains(token, direction) { return true }
+    }
+    return false
 }
+    
+
+func loadRoom(id string) string { 
+    currentRoom = currentMap[id].(map[string]interface{}) 
+    return "You have entered " + currentRoom["name"].(string)
+}
+func GetCurrentRoom() string { return currentRoom["name"].(string) }
 
 func GameCommand(cmd string) string {
-    if ! isGameCommand(cmd) { return "Invalid command." }
-    return "Valid command!"
+    splitCmd := strings.Split(cmd, " ")
+    for _, token := range splitCmd {
+        strings.ToLower(strings.ReplaceAll(token, " ", ""))
+    }
+
+    switch splitCmd[0] {
+    case "go":
+        if ! directionChecker(splitCmd[1]) { return "That is not a valid direction" }
+        return loadRoom(currentRoom[splitCmd[1]].(string)) 
+    case "look":
+        return currentRoom["look"].(string)
+    case "whereami":
+        return GetCurrentRoom()
+    default:
+        return "Hmm..."
+    }
 }
