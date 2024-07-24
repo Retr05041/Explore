@@ -1,0 +1,38 @@
+[
+     {
+        "id": "start",
+        "name": "Your Room",
+        "needed item": null,
+        "north": null,
+        "east": null,
+        "south": "hallway",
+        "west": null,
+        "item": "Key",
+        "look": "The coldness of your room chills you to the bone, you see a door to the south.",
+        "end": false
+    },
+    {
+        "id": "hallway",
+        "name": "The Hallway",
+        "needed item": "Key",
+        "north": "start",
+        "east": null,
+        "south": "finish",
+        "west": null,
+        "item": null,
+        "look": "A half open door is to your south, your bedroom door is still open.",
+        "end": false
+    },
+    {
+        "id": "finish",
+        "name": "Outside",
+        "needed item": "A Soul",
+        "north": null,
+        "east": null,
+        "south": null,
+        "west": null,
+        "item": null,
+        "look": "Ah, the fresh air.",
+        "end": true
+    }
+]
