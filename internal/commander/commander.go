@@ -1,9 +1,9 @@
 package commander
 
 import (
-    "strings"
+	"strings"
 
-    "github.com/spf13/viper"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -22,7 +22,7 @@ func Init(currMap *viper.Viper) {
 
 func directionChecker(direction string) bool {
     for _, token := range directions {
-        if strings.Contains(token, direction) { return true }
+        if token == direction { return true }
     }
     return false
 }
@@ -36,8 +36,11 @@ func GetCurrentRoom() string { return currentRoom["name"].(string) }
 
 func GameCommand(cmd string) string {
     splitCmd := strings.Split(cmd, " ")
+    if len(splitCmd) > 2 { return "Hmm..." }
+
     for _, token := range splitCmd {
         strings.ToLower(strings.ReplaceAll(token, " ", ""))
+        if token == "" { splitCmd[len(splitCmd)-1] = "UNKNOWN" } // Bogus check to see if there is a whitespace element - needs to be after the length check to work :(
     }
 
     switch splitCmd[0] {

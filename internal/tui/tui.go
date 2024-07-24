@@ -36,15 +36,15 @@ var (
 
 	// unfocused model
 	unfocusedModelStyle = lipgloss.NewStyle().
-				Width(30). // Be sure to change the values for the textarea and viewport in the message model if you change these
-				Height(10).
+				Width(60). // Be sure to change the values for the textarea and viewport in the message model if you change these
+				Height(20).
 				Align(lipgloss.Left, lipgloss.Bottom). // Sets alignment of content within the model
 				BorderStyle(lipgloss.HiddenBorder())
 
 		// Focused model
 	focusedModelStyle = lipgloss.NewStyle().
-				Width(30).
-				Height(10).
+				Width(60).
+				Height(20).
 				Align(lipgloss.Left, lipgloss.Bottom).
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("69"))
@@ -99,11 +99,11 @@ func newModel() model {
 	ta.Focus()
 	ta.Prompt = "┃ "
 	ta.CharLimit = 15                                // Needs editing
-	ta.SetWidth(30)                                  // Same as {model}Style width
+	ta.SetWidth(60)                                  // Same as {model}Style width
 	ta.SetHeight(1)                                  // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling
 	ta.ShowLineNumbers = false
-	vp := viewport.New(30, 10)
+	vp := viewport.New(60, 20)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Inventory
