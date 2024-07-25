@@ -2,38 +2,21 @@ package commander
 
 import (
 	"strings"
-
-	"github.com/spf13/viper"
+    "explore/internal/maphandler"
 )
 
 var (
-    currentMap  map[string]interface{}
-    currentRoom map[string]interface{}
+    gameMap maphandler.MapInfo
     directions = []string { "north", "east", "south", "west" }
 )
 
-func Init(currMap *viper.Viper) {
-    err := currMap.Unmarshal(&currentMap)
-    if err != nil {
-        panic(err)
-    }
-    loadRoom("start")
-}
-
-func directionChecker(direction string) bool {
-    for _, token := range directions {
-        if token == direction { return true }
-    }
-    return false
+func Init(mapLocation string) error {
+    holdMap, err := maphandler.InitNewMap(mapLocation) 
+    if err != nil { return err }
+    gameMap = *holdMap
+    return nil
 }
     
-
-func loadRoom(id string) string { 
-    currentRoom = currentMap[id].(map[string]interface{}) 
-    return "You have entered " + currentRoom["name"].(string)
-}
-func GetCurrentRoom() string { return currentRoom["name"].(string) }
-
 func GameCommand(cmd string) string {
     splitCmd := strings.Split(cmd, " ")
     if len(splitCmd) > 2 { return "Hmm..." }
@@ -45,12 +28,12 @@ func GameCommand(cmd string) string {
 
     switch splitCmd[0] {
     case "go":
-        if ! directionChecker(splitCmd[1]) { return "That is not a valid direction" }
-        return loadRoom(currentRoom[splitCmd[1]].(string)) 
+        if ! maphandler.MoveDirection(&gameMap, splitCmd[1]) { return "Could not move there" }
+        return "Moved to " + gameMap.CurrentRoom.Name
     case "look":
-        return currentRoom["look"].(string)
+        return gameMap.CurrentRoom.Look
     case "whereami":
-        return GetCurrentRoom()
+        return gameMap.CurrentRoom.Name
     default:
         return "Hmm..."
     }
