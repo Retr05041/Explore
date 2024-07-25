@@ -107,13 +107,11 @@ func newModel() model {
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Inventory
-	items := []list.Item{
-		item("Ramen"),
-		item("Tomato Soup"),
-		item("Hamburgers"),
-		item("Cheeseburgers"),
-		item("Currywurst"),
-	}
+	items := []list.Item{}
+    for _, baseItem := range commander.GetCurrPlayerInv() {
+        items = append(items, item(baseItem))
+    } 
+
 	const defaultWidth = 20
 	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
 	l.Title = "Inventory"

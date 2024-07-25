@@ -3,17 +3,25 @@ package commander
 import (
 	"strings"
     "explore/internal/maphandler"
+    "explore/internal/playerhandler"
 )
 
 var (
     gameMap maphandler.MapInfo
+    currentPlayer playerhandler.Player
 )
 
 func Init(mapLocation string) error {
     holdMap, err := maphandler.InitNewMap(mapLocation) 
     if err != nil { return err }
     gameMap = *holdMap
+
+    currentPlayer = *playerhandler.NewPlayer("Player")
     return nil
+}
+
+func GetCurrPlayerInv() []string {
+   return currentPlayer.Inventory 
 }
     
 func GameCommand(cmd string) string {
