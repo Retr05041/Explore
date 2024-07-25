@@ -1,35 +1,41 @@
 {
-    "start": {
-        "name": "Your Room",
-        "needed item": null,
-        "north": null,
-        "east": null,
-        "south": "hallway",
-        "west": null,
-        "item": "Key",
-        "look": "The coldness of your room chills you to the bone, you see a door to the south.",
-        "end": false
+    "METADATA": {
+        "start": 0
     },
-    "hallway": {
-        "name": "The Hallway",
-        "needed item": "Key",
-        "north": "start",
-        "east": null,
-        "south": "finish",
-        "west": null,
-        "item": null,
-        "look": "A half open door is to your south, your bedroom door is still open.",
-        "end": false
-    },
-    "finish": {
-        "name": "Outside",
-        "needed item": "A Soul",
-        "north": null,
-        "east": null,
-        "south": null,
-        "west": null,
-        "item": null,
-        "look": "Ah, the fresh air.",
-        "end": true
-    }
+
+    "GAME": [
+        {
+            "name": "Your Room",
+            "needed item": null,
+            "north": null,
+            "east": null,
+            "south": 1,
+            "west": null,
+            "item": "Key",
+            "look": "The coldness of your room chills you to the bone, you see a door to the south.",
+            "end": false
+        },
+        {
+            "name": "The Hallway",
+            "needed item": "Key",
+            "north": 0,
+            "east": null,
+            "south": 2,
+            "west": null,
+            "item": null,
+            "look": "A half open door is to your south, your bedroom door is still open.",
+            "end": false
+        },
+        {
+            "name": "Outside",
+            "needed item": "A Soul",
+            "north": 1,
+            "east": null,
+            "south": null,
+            "west": null,
+            "item": null,
+            "look": "Ah, the fresh air.",
+            "end": true
+        }
+    ]
 }
