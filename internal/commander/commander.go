@@ -7,7 +7,6 @@ import (
 
 var (
     gameMap maphandler.MapInfo
-    directions = []string { "north", "east", "south", "west" }
 )
 
 func Init(mapLocation string) error {
@@ -28,7 +27,7 @@ func GameCommand(cmd string) string {
 
     switch splitCmd[0] {
     case "go":
-        if ! maphandler.MoveDirection(&gameMap, splitCmd[1]) { return "Could not move there" }
+        if ! gameMap.MoveDirection(splitCmd[1]) { return "Could not move there" }
         return "Moved to " + gameMap.CurrentRoom.Name
     case "look":
         return gameMap.CurrentRoom.Look

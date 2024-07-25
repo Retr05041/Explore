@@ -43,10 +43,6 @@ func loadMap(filename string) (*MapInfo, error) {
 	return tmpMap, nil
 }
 
-func (m MapInfo) setStart(roomIndex int) {
-	m.CurrentRoom = m.Rooms[roomIndex]
-}
-
 func validDirection(roomIndex *int) bool {
 	if roomIndex != nil {
 		return true
@@ -54,7 +50,7 @@ func validDirection(roomIndex *int) bool {
 	return false
 }
 
-func MoveDirection(m *MapInfo, direction string) bool {
+func (m *MapInfo) MoveDirection(direction string) bool {
 	switch direction {
 	case "north":
 		if !validDirection(m.CurrentRoom.North) {
