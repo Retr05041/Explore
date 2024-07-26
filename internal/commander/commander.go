@@ -1,47 +1,60 @@
 package commander
 
 import (
+	"explore/internal/maphandler"
+	"explore/internal/playerhandler"
+	"fmt"
 	"strings"
-    "explore/internal/maphandler"
-    "explore/internal/playerhandler"
 )
 
 var (
-    gameMap maphandler.MapInfo
-    currentPlayer playerhandler.Player
+	currentMap    maphandler.MapInfo
+	currentDB     playerhandler.Database
+	currentPlayer playerhandler.Player
 )
 
-func Init(mapLocation string) error {
-    holdMap, err := maphandler.InitNewMap(mapLocation) 
-    if err != nil { return err }
-    gameMap = *holdMap
+func Init(initMap maphandler.MapInfo, initDB playerhandler.Database, initPlayer playerhandler.Player) {
+	// Initialise map
+	currentMap = initMap
 
-    currentPlayer = *playerhandler.NewPlayer("Player")
-    return nil
+	// Load / Create the database for the map
+	currentDB = initDB
+
+	// Load the player from the database
+	currentPlayer = initPlayer
+
+	fmt.Println(currentPlayer.Name)
+	fmt.Println(currentPlayer.Inventory)
 }
 
 func GetCurrPlayerInv() []string {
-   return currentPlayer.Inventory 
+	return currentPlayer.Inventory
 }
-    
-func GameCommand(cmd string) string {
-    splitCmd := strings.Split(cmd, " ")
-    if len(splitCmd) > 2 { return "Hmm..." }
 
-    for _, token := range splitCmd {
-        strings.ToLower(strings.ReplaceAll(token, " ", ""))
-        if token == "" { splitCmd[len(splitCmd)-1] = "UNKNOWN" } // Bogus check to see if there is a whitespace element - needs to be after the length check to work :(
-    }
+func PlayerCommand(cmd string) string {
+	splitCmd := strings.Split(cmd, " ")
+	if len(splitCmd) > 2 {
+		return "Hmm..."
+	}
 
-    switch splitCmd[0] {
-    case "go":
-        if ! gameMap.MoveDirection(splitCmd[1]) { return "Could not move there" }
-        return "Moved to " + gameMap.CurrentRoom.Name
-    case "look":
-        return gameMap.CurrentRoom.Look
-    case "whereami":
-        return gameMap.CurrentRoom.Name
-    default:
-        return "Hmm..."
-    }
+	for _, token := range splitCmd {
+		strings.ToLower(strings.ReplaceAll(token, " ", ""))
+		if token == "" {
+			splitCmd[len(splitCmd)-1] = "UNKNOWN"
+		} // Bogus check to see if there is a whitespace element - needs to be after the length check to work :(
+	}
+
+	switch splitCmd[0] {
+	case "go":
+		if !currentMap.MoveDirection(splitCmd[1]) {
+			return "Could not move there"
+		}
+		return "Moved to " + currentMap.CurrentRoom.Name
+	case "look":
+		return currentMap.CurrentRoom.Look
+	case "whereami":
+		return currentMap.CurrentRoom.Name
+	default:
+		return "Hmm..."
+	}
 }
