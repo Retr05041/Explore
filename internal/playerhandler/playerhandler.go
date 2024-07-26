@@ -34,7 +34,7 @@ func LoadDatabase(filename string) *Database {
 	tmpDB := new(Database)
 	tmpDB.inst = db
 
-	err = tmpDB.InitTable()
+	err = tmpDB.InitTables()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func LoadDatabase(filename string) *Database {
 }
 
 // If the tables don't exist, create them
-func (db *Database) InitTable() error {
+func (db *Database) InitTables() error {
 	query := `
     CREATE TABLE IF NOT EXISTS players(
         player_name TEXT NOT NULL UNIQUE
