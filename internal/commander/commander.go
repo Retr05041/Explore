@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	currentMap    maphandler.MapInfo
-	currentDB     playerhandler.Database
-	currentPlayer playerhandler.Player
+	currentMap    *maphandler.MapInfo
+	currentDB     *playerhandler.Database
+	currentPlayer *playerhandler.Player
 )
 
-func Init(initMap maphandler.MapInfo, initDB playerhandler.Database, initPlayer playerhandler.Player) {
+func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlayer *playerhandler.Player) {
 	// Initialise map
 	currentMap = initMap
 
