@@ -78,6 +78,13 @@ func (m *MapInfo) MoveDirection(direction string) bool {
 	return true
 }
 
+func (m *MapInfo) ItemInRoom(item string) bool {
+	if item != *m.CurrentRoom.Item {
+		return false	
+	}
+	return true
+}
+
 func InitNewMap(filename string) (*MapInfo, error) {
 	newMap, err := loadMap(filename)
 	if err != nil {

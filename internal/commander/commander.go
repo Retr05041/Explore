@@ -31,6 +31,10 @@ func GetCurrPlayerInv() []string {
 	return currentPlayer.Inventory
 }
 
+func GetCurrPlayerName() string {
+	return currentPlayer.Name
+}
+
 func PlayerCommand(cmd string) string {
 	splitCmd := strings.Split(cmd, " ")
 	if len(splitCmd) > 2 {
@@ -52,6 +56,16 @@ func PlayerCommand(cmd string) string {
 		return "Moved to " + currentMap.CurrentRoom.Name
 	case "look":
 		return currentMap.CurrentRoom.Look
+	case "get":
+		if !currentMap.ItemInRoom(splitCmd[1]) {
+			return "That doesn't appear to be here."
+		}
+		if currentPlayer.IsInInv(splitCmd[1]) {
+			return "You already have " + splitCmd[1]
+		}
+		currentPlayer.AddToInv(splitCmd[1])
+		currentDB.SavePlayerInfo(currentPlayer)
+		return "Got " + splitCmd[1]
 	case "whereami":
 		return currentMap.CurrentRoom.Name
 	default:

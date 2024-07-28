@@ -108,9 +108,9 @@ func newModel() model {
 
 	// Inventory
 	items := []list.Item{}
-    for _, baseItem := range commander.GetCurrPlayerInv() {
-        items = append(items, item(baseItem))
-    } 
+	for _, baseItem := range commander.GetCurrPlayerInv() {
+		items = append(items, item(baseItem))
+	}
 
 	const defaultWidth = 20
 	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
@@ -160,8 +160,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.choice = string(i)
 				}
 			} else {
-				m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-                m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.GameCommand(m.textarea.Value()))
+				m.messages = append(m.messages, m.senderStyle.Render(commander.GetCurrPlayerName()+": ")+m.textarea.Value())
+				m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.PlayerCommand(m.textarea.Value()))
 				m.viewport.SetContent(strings.Join(m.messages, "\n"))
 				m.textarea.Reset()
 				m.viewport.GotoBottom()

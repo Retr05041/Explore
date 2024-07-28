@@ -115,6 +115,13 @@ func (p *Player) AddToInv(item string) {
 	p.Inventory = append(p.Inventory, item)
 }
 
+func (p *Player) IsInInv(item string) bool {
+	for _, invItem := range p.Inventory {
+		if item == invItem { return true }
+	}
+	return false
+}
+
 func (db *Database) SavePlayerInfo(p *Player) error {
 	for _, item := range p.Inventory {
 		_, err := db.inst.Exec("INSERT INTO inventory(player_name, item) VALUES(?,?)", p.Name, item)

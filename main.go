@@ -4,6 +4,7 @@ import (
 	"explore/internal/commander"
 	"explore/internal/maphandler"
 	"explore/internal/playerhandler"
+	"explore/internal/tui"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func Run() error {
 	commander.Init(initMap, DB, player) // Run tui once commander is setup
 
     // TUI
-	//tui.Start()
+	tui.Start()
 
 	return nil
 }
