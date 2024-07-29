@@ -27,6 +27,7 @@ type MapInfo struct {
 	CurrentRoom room
 }
 
+// Loads the map into the MapInfo struct
 func loadMap(filename string) (*MapInfo, error) {
 	tmpMap := new(MapInfo)
 	file, err := os.ReadFile(filename)
@@ -78,6 +79,7 @@ func (m *MapInfo) MoveDirection(direction string) bool {
 	return true
 }
 
+// Checks if item is in the current room
 func (m *MapInfo) ItemInRoom(item string) bool {
 	if m.CurrentRoom.Item == "nothing" { return false }
 	if item != m.CurrentRoom.Item {
@@ -86,6 +88,7 @@ func (m *MapInfo) ItemInRoom(item string) bool {
 	return true
 }
 
+// Public load map function
 func InitNewMap(filename string) (*MapInfo, error) {
 	newMap, err := loadMap(filename)
 	if err != nil {

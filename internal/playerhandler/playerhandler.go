@@ -15,10 +15,12 @@ var (
 	ErrDeleteFailed = errors.New("delete failed")
 )
 
+// Holds the open database instance
 type Database struct {
 	inst *sql.DB
 }
 
+// Player info loaded from the Database
 type Player struct {
 	Name      string
 	Inventory []string
@@ -45,11 +47,11 @@ func LoadDatabase(filename string) *Database {
 func (db *Database) InitTables() error {
 	query := `
     CREATE TABLE IF NOT EXISTS players(
-        player_name TEXT NOT NULL UNIQUE
+        player_name TEXT NOT NULL UNIQUE 
     );
     CREATE TABLE IF NOT EXISTS inventory(
         inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        player_name TEXT NOT NULL UNIQUE,
+        player_name TEXT NOT NULL,
         item TEXT NOT NULL UNIQUE,
         FOREIGN KEY (player_name) REFERENCES players(player_name)
     );
@@ -59,7 +61,7 @@ func (db *Database) InitTables() error {
 	return err
 }
 
-// Populate the player struct given a player name (each one is uniue)
+// Populate the player struct given a player name (each one is uniue) -- This and CreatePlayer will need to be conjoined in some way, this will take effect when the menu comes into play
 func (db *Database) LoadPlayer(playername string) (*Player, error) {
 	// Load Player
 	row := db.inst.QueryRow("SELECT * FROM players WHERE player_name=?", playername)
@@ -111,10 +113,12 @@ func (db *Database) CreatePlayer(name string) error {
 	return nil
 }
 
+// Adds item to playr structs inventory
 func (p *Player) AddToInv(item string) {
 	p.Inventory = append(p.Inventory, item)
 }
 
+// Check if an item is in the players inventory
 func (p *Player) IsInInv(item string) bool {
 	for _, invItem := range p.Inventory {
 		if item == invItem { return true }
@@ -122,6 +126,7 @@ func (p *Player) IsInInv(item string) bool {
 	return false
 }
 
+// Saves the current player (player will exist every time, as you either selected the player or created a new one
 func (db *Database) SavePlayerInfo(p *Player) error {
 	for _, item := range p.Inventory {
 		_, err := db.inst.Exec("INSERT INTO inventory(player_name, item) VALUES(?,?)", p.Name, item)

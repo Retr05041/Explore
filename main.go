@@ -35,7 +35,6 @@ func Run() error {
 
     // Commander
 	commander.Init(initMap, DB, player) // Run tui once commander is setup
-
     // TUI
 	tui.Start()
 
