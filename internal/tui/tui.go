@@ -171,6 +171,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update whichever model is focused
 		switch m.state {
 		case listView:
+			for index, invItem := range commander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
+				m.inventory.InsertItem(index, item(invItem))
+			}
 			m.inventory, cmd = m.inventory.Update(msg)
 			cmds = append(cmds, cmd)
 		default:

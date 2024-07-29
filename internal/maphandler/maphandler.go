@@ -16,7 +16,7 @@ type room struct {
 	East       *int    `json:"east"`
 	South      *int    `json:"south"`
 	West       *int    `json:"west"`
-	Item       *string `json:"item"`
+	Item       string `json:"item"`
 	Look       string  `json:"look"`
 	End        bool    `json:"end"`
 }
@@ -79,9 +79,10 @@ func (m *MapInfo) MoveDirection(direction string) bool {
 }
 
 func (m *MapInfo) ItemInRoom(item string) bool {
-	if item != *m.CurrentRoom.Item {
+	if m.CurrentRoom.Item == "nothing" { return false }
+	if item != m.CurrentRoom.Item {
 		return false	
-	}
+	} 
 	return true
 }
 

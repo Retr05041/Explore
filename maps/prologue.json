@@ -22,18 +22,18 @@
             "east": null,
             "south": 2,
             "west": null,
-            "item": null,
+            "item": "Soul",
             "look": "A half open door is to your south, your bedroom door is still open.",
             "end": false
         },
         {
             "name": "Outside",
-            "needed item": "A Soul",
+            "needed item": "Soul",
             "north": 1,
             "east": null,
             "south": null,
             "west": null,
-            "item": null,
+            "item": "nothing",
             "look": "Ah, the fresh air.",
             "end": true
         }

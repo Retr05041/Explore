@@ -37,7 +37,7 @@ func GetCurrPlayerName() string {
 
 func PlayerCommand(cmd string) string {
 	splitCmd := strings.Split(cmd, " ")
-	if len(splitCmd) > 2 {
+	if len(splitCmd) > 2 || len(splitCmd) <= 1 {
 		return "Hmm..."
 	}
 
