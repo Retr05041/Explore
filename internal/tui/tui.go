@@ -4,7 +4,6 @@ import (
 	"explore/internal/commander"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -206,11 +205,12 @@ func (m model) View() string {
 	return s
 }
 
-func Start() {
+func Start() error {
 	p := tea.NewProgram(newModel(), tea.WithAltScreen())
 	// p := tea.NewProgram(newModel())
 
 	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+        return err
 	}
+    return nil
 }

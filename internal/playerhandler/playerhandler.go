@@ -3,7 +3,6 @@ package playerhandler
 import (
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/mattn/go-sqlite3"
 )
@@ -28,10 +27,10 @@ type Player struct {
 }
 
 // Loads the database corresponding to the map
-func LoadDatabase(filename string) *Database {
+func LoadDatabase(filename string) (*Database,error) {
 	db, err := sql.Open("sqlite3", filename+".db")
 	if err != nil {
-		log.Fatal(err)
+        return nil, err
 	}
 
 	tmpDB := new(Database)
@@ -39,9 +38,9 @@ func LoadDatabase(filename string) *Database {
 
 	err = tmpDB.InitTables()
 	if err != nil {
-		log.Fatal(err)
+        return nil, err
 	}
-	return tmpDB
+	return tmpDB, nil
 }
 
 // If the tables don't exist, create them
