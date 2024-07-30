@@ -1,6 +1,7 @@
 {
     "METADATA": {
-        "start": 0
+        "start": 0,
+        "end": 2
     },
 
     "GAME": [
@@ -11,31 +12,28 @@
             "east": null,
             "south": 1,
             "west": null,
-            "item": "Key",
-            "look": "The coldness of your room chills you to the bone, you see a door to the south.",
-            "end": false
+            "item": "key",
+            "look": "The coldness of your room chills you to the bone, you see a door to the south and a key laying on the floor."
         },
         {
             "name": "The Hallway",
-            "needed item": "Key",
+            "needed item": "key",
             "north": 0,
             "east": null,
             "south": 2,
             "west": null,
-            "item": null,
-            "look": "A half open door is to your south, your bedroom door is still open.",
-            "end": false
+            "item": "soul",
+            "look": "A half open door is to your south, your bedroom door is still open. A soul floats in front of you."
         },
         {
             "name": "Outside",
-            "needed item": "A Soul",
+            "needed item": "soul",
             "north": 1,
             "east": null,
             "south": null,
             "west": null,
             "item": null,
-            "look": "Ah, the fresh air.",
-            "end": true
+            "look": "Ah, the fresh air."
         }
     ]
 }

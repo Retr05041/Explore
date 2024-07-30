@@ -4,7 +4,6 @@ import (
 	"explore/internal/commander"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -108,9 +107,9 @@ func newModel() model {
 
 	// Inventory
 	items := []list.Item{}
-    for _, baseItem := range commander.GetCurrPlayerInv() {
-        items = append(items, item(baseItem))
-    } 
+	for _, baseItem := range commander.GetCurrPlayerInv() {
+		items = append(items, item(baseItem))
+	}
 
 	const defaultWidth = 20
 	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
@@ -160,8 +159,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.choice = string(i)
 				}
 			} else {
-				m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-                m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.GameCommand(m.textarea.Value()))
+				m.messages = append(m.messages, m.senderStyle.Render(commander.GetCurrPlayerName()+": ")+m.textarea.Value())
+				m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.PlayerCommand(m.textarea.Value()))
 				m.viewport.SetContent(strings.Join(m.messages, "\n"))
 				m.textarea.Reset()
 				m.viewport.GotoBottom()
@@ -171,6 +170,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update whichever model is focused
 		switch m.state {
 		case listView:
+			for index, invItem := range commander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
+				m.inventory.InsertItem(index, item(invItem))
+			}
 			m.inventory, cmd = m.inventory.Update(msg)
 			cmds = append(cmds, cmd)
 		default:
@@ -203,11 +205,12 @@ func (m model) View() string {
 	return s
 }
 
-func Start() {
+func Start() error {
 	p := tea.NewProgram(newModel(), tea.WithAltScreen())
 	// p := tea.NewProgram(newModel())
 
 	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+        return err
 	}
+    return nil
 }
