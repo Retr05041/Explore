@@ -27,6 +27,7 @@ const (
 )
 
 var (
+    GameCommander *commander.Commander
 	// Inventory
 	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
@@ -107,7 +108,7 @@ func newModel() model {
 
 	// Inventory
 	items := []list.Item{}
-	for _, baseItem := range commander.GetCurrPlayerInv() {
+	for _, baseItem := range GameCommander.GetCurrPlayerInv() {
 		items = append(items, item(baseItem))
 	}
 
@@ -159,8 +160,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.choice = string(i)
 				}
 			} else {
-				m.messages = append(m.messages, m.senderStyle.Render(commander.GetCurrPlayerName()+": ")+m.textarea.Value())
-				m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.PlayerCommand(m.textarea.Value()))
+				m.messages = append(m.messages, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
+				m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.PlayerCommand(m.textarea.Value()))
 				m.viewport.SetContent(strings.Join(m.messages, "\n"))
 				m.textarea.Reset()
 				m.viewport.GotoBottom()
@@ -170,7 +171,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update whichever model is focused
 		switch m.state {
 		case listView:
-			for index, invItem := range commander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
+			for index, invItem := range GameCommander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
 				m.inventory.InsertItem(index, item(invItem))
 			}
 			m.inventory, cmd = m.inventory.Update(msg)
@@ -205,7 +206,8 @@ func (m model) View() string {
 	return s
 }
 
-func Start() error {
+func Start(cmder *commander.Commander) error {
+    GameCommander = cmder
 	p := tea.NewProgram(newModel(), tea.WithAltScreen())
 	// p := tea.NewProgram(newModel())
 
