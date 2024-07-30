@@ -13,39 +13,36 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Have to make types for bubbletea to understand when it comes to the update function
-type sessionState uint
+// Custom types
 type errMsg error
-
-// list types
 type item string
 
-const (
-	inventoryHeight              = 10
-	messageView     sessionState = iota
-	listView
-)
-
 var (
-    GameCommander *commander.Commander
+	GameCommander *commander.Commander
+
 	// Inventory
 	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-
-	// unfocused model
-	unfocusedModelStyle = lipgloss.NewStyle().
-				Width(60). // Be sure to change the values for the textarea and viewport in the message model if you change these
-				Height(20).
-				Align(lipgloss.Left, lipgloss.Bottom). // Sets alignment of content within the model
-				BorderStyle(lipgloss.HiddenBorder())
+	inventoryStyle    = lipgloss.NewStyle().
+				Width(20). // Be sure to change the values for the textarea and viewport in the message model if you change these
+				Height(23).
+				Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#ffffff"))
 
 		// Focused model
-	focusedModelStyle = lipgloss.NewStyle().
+	viewportStyle = lipgloss.NewStyle().
 				Width(60).
-				Height(20).
-				Align(lipgloss.Left, lipgloss.Bottom).
+				Height(19).
+				Align(lipgloss.Left, lipgloss.Top).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#ffffff"))
+
+    textareaStyle = lipgloss.NewStyle().
+				Width(60).
+				Height(1).
+				Align(lipgloss.Left, lipgloss.Top).
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("69"))
 
@@ -53,8 +50,6 @@ var (
 )
 
 type model struct {
-	state sessionState
-
 	// List model attributes
 	inventory list.Model
 	choice    string
@@ -83,12 +78,6 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	str := fmt.Sprintf("%d. %s", index+1, i)
 
 	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
-		}
-	}
-
 	fmt.Fprint(w, fn(str))
 }
 
@@ -113,16 +102,16 @@ func newModel() model {
 	}
 
 	const defaultWidth = 20
-	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
+	const defaultHeight = 21 // Cause the textarea adds 1 height as well
+	l := list.New(items, itemDelegate{}, defaultWidth, defaultHeight)
 	l.Title = "Inventory"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
+    l.SetShowHelp(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
 
 	return model{
-		state:       messageView,
 		inventory:   l,
 		textarea:    ta,
 		messages:    []string{},
@@ -147,72 +136,44 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "tab":
-			if m.state == messageView {
-				m.state = listView
-			} else {
-				m.state = messageView
-			}
 		case "enter":
-			if m.state == listView {
-				i, ok := m.inventory.SelectedItem().(item)
-				if ok {
-					m.choice = string(i)
-				}
-			} else {
-				m.messages = append(m.messages, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
-				m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.PlayerCommand(m.textarea.Value()))
-				m.viewport.SetContent(strings.Join(m.messages, "\n"))
-				m.textarea.Reset()
-				m.viewport.GotoBottom()
-			}
+			m.messages = append(m.messages, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
+			m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.PlayerCommand(m.textarea.Value()))
+			m.viewport.SetContent(strings.Join(m.messages, "\n"))
+			m.textarea.Reset()
+			m.viewport.GotoBottom()
 		}
 
-		// Update whichever model is focused
-		switch m.state {
-		case listView:
-			for index, invItem := range GameCommander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
-				m.inventory.InsertItem(index, item(invItem))
-			}
-			m.inventory, cmd = m.inventory.Update(msg)
-			cmds = append(cmds, cmd)
-		default:
-			m.textarea, cmd = m.textarea.Update(msg)
-			cmds = append(cmds, cmd)
-			m.viewport, cmd = m.viewport.Update(msg)
-			cmds = append(cmds, cmd)
-		}
+		// Update text area and viewport no matter what
+		m.textarea, cmd = m.textarea.Update(msg)
+		cmds = append(cmds, cmd)
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 	return m, tea.Batch(cmds...)
 }
 
-// For Viewing two things at once when entering the View() function
-func (m model) viewMessage() string {
-	return fmt.Sprintf(
-		"%s\n%s",
-		m.viewport.View(),
-		m.textarea.View(), // This is what causes the height increase I believe...
-	)
-}
-
 func (m model) View() string {
 	var s string
-	if m.state == listView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(m.inventory.View()), unfocusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage())))
-	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, unfocusedModelStyle.Render(m.inventory.View()), focusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage()))) // viewMessage is needed so we can work with this line here nicely
-	}
-	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • q: exit\n"))
+    s += lipgloss.JoinHorizontal(
+        lipgloss.Top, 
+        inventoryStyle.Render(m.inventory.View()), 
+        lipgloss.JoinVertical(
+            lipgloss.Top, 
+            viewportStyle.Render(m.viewport.View()), 
+            textareaStyle.Render(m.textarea.View())))
+
+	s += helpStyle.Render(fmt.Sprintf("\nq: exit\n"))
 	return s
 }
 
 func Start(cmder *commander.Commander) error {
-    GameCommander = cmder
+	GameCommander = cmder
 	p := tea.NewProgram(newModel(), tea.WithAltScreen())
 	// p := tea.NewProgram(newModel())
 
 	if _, err := p.Run(); err != nil {
-        return err
+		return err
 	}
-    return nil
+	return nil
 }
