@@ -7,18 +7,18 @@ import (
 
 type metaData struct {
 	StartRoomIndex int `json:"start"`
+	EndRoomIndex   int `json:"end"`
 }
 
 type room struct {
 	Name       string  `json:"name"`
-	NeededItem string  `json:"needed item"`
+	NeededItem *string `json:"needed item"`
 	North      *int    `json:"north"`
 	East       *int    `json:"east"`
 	South      *int    `json:"south"`
 	West       *int    `json:"west"`
-	Item       string `json:"item"`
+	Item       *string `json:"item"`
 	Look       string  `json:"look"`
-	End        bool    `json:"end"`
 }
 
 type MapInfo struct {
@@ -44,32 +44,40 @@ func loadMap(filename string) (*MapInfo, error) {
 	return tmpMap, nil
 }
 
-func validDirection(roomIndex *int) bool {
+func (m *MapInfo) validDirection(roomIndex *int, playerInv []string) bool {
 	if roomIndex != nil {
+		if m.Rooms[*roomIndex].NeededItem != nil {
+			for _, item := range playerInv {
+				if *m.Rooms[*roomIndex].NeededItem == item {
+					return true
+				}
+			}
+			return false
+		}
 		return true
 	}
 	return false
 }
 
-func (m *MapInfo) MoveDirection(direction string) bool {
+func (m *MapInfo) MoveDirection(direction string, playerInv []string) bool {
 	switch direction {
 	case "north":
-		if !validDirection(m.CurrentRoom.North) {
+		if !m.validDirection(m.CurrentRoom.North, playerInv) {
 			return false
 		}
 		m.CurrentRoom = m.Rooms[*m.CurrentRoom.North]
 	case "east":
-		if !validDirection(m.CurrentRoom.East) {
+		if !m.validDirection(m.CurrentRoom.East, playerInv) {
 			return false
 		}
 		m.CurrentRoom = m.Rooms[*m.CurrentRoom.East]
 	case "south":
-		if !validDirection(m.CurrentRoom.South) {
+		if !m.validDirection(m.CurrentRoom.South, playerInv) {
 			return false
 		}
 		m.CurrentRoom = m.Rooms[*m.CurrentRoom.South]
 	case "west":
-		if !validDirection(m.CurrentRoom.West) {
+		if !m.validDirection(m.CurrentRoom.West, playerInv) {
 			return false
 		}
 		m.CurrentRoom = m.Rooms[*m.CurrentRoom.West]
@@ -81,10 +89,12 @@ func (m *MapInfo) MoveDirection(direction string) bool {
 
 // Checks if item is in the current room
 func (m *MapInfo) ItemInRoom(item string) bool {
-	if m.CurrentRoom.Item == "nothing" { return false }
-	if item != m.CurrentRoom.Item {
-		return false	
-	} 
+	if m.CurrentRoom.Item == nil {
+		return false
+	}
+	if item != *m.CurrentRoom.Item {
+		return false
+	}
 	return true
 }
 
