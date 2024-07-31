@@ -9,6 +9,9 @@ import (
 type Commander struct {
 	InventoryChangeChannel chan struct{} // Made the channel a struct type cause it can have no data - i.e. serves as just a signal type
 
+	Response        string
+	ResponseChannel chan struct{}
+
 	currentMap    *maphandler.MapInfo
 	currentDB     *playerhandler.Database
 	currentPlayer *playerhandler.Player
@@ -17,8 +20,9 @@ type Commander struct {
 // Create a new commander
 func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlayer *playerhandler.Player) *Commander {
 	var tmpCommander Commander
-    // Channels
-    tmpCommander.InventoryChangeChannel = make(chan struct{}, 1) // Buffer capacity is set to 1
+	// Channels
+	tmpCommander.InventoryChangeChannel = make(chan struct{}, 1) // Buffer capacity is set to 1
+	tmpCommander.ResponseChannel = make(chan struct{}, 1)
 
 	// Game Info
 	tmpCommander.currentMap = initMap
@@ -29,11 +33,19 @@ func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlaye
 }
 
 func (c *Commander) NotifyInvChange() {
-    select {
-    case c.InventoryChangeChannel <- struct{}{}: // When this function is called, an empty struct is sent into the channel - because we made the buffer 1 it succeeds if it can put the empty struct into it
-    default:
-        // InventoryChangeChannel is full, ignore
-    }
+	select {
+	case c.InventoryChangeChannel <- struct{}{}: // When this function is called, an empty struct is sent into the channel - because we made the buffer 1 it succeeds if it can put the empty struct into it
+	default:
+		// InventoryChangeChannel is full, ignore
+	}
+}
+
+func (c *Commander) NotifyResponse() {
+	select {
+	case c.ResponseChannel <- struct{}{}:
+	default:
+		// InventoryChangeChannel is full, ignore
+	}
 }
 
 // Get players inventory -- for displaying
@@ -47,45 +59,62 @@ func (c *Commander) GetCurrPlayerName() string {
 }
 
 // When the player gives a command, this handles it and returns a string to be shown to the player in response
-func (c *Commander) PlayerCommand(cmd string) string {
+func (c *Commander) PlayerCommand(cmd string) {
 	trimmedCmd := strings.TrimSpace(cmd)
 	cleanedCmd := strings.Fields(trimmedCmd)
-	if len(cleanedCmd) > 2 { // This is so dumb
-		return "Hmm..."
+	if len(cleanedCmd) > 2 || len(cleanedCmd) == 0 { // This is so dumb
+		c.Response = "Hmm..."
+		c.NotifyResponse()
+		return
 	}
 
 	// Command prefix switch
 	switch cleanedCmd[0] {
 	case "go": // Switch rooms
 		if len(cleanedCmd) == 1 {
-			return "Please specify a direction"
+			c.Response = "Please specify a direction"
+			c.NotifyResponse()
+			return
 		}
 		if !c.currentMap.MoveDirection(cleanedCmd[1], c.currentPlayer.Inventory) {
-			return "Could not move there"
+			c.Response = "Could not move there"
+			c.NotifyResponse()
+			return
 		}
-		return "Moved to " + c.currentMap.CurrentRoom.Name
+		c.Response = "Moved to " + c.currentMap.CurrentRoom.Name
+        c.NotifyResponse()
 	case "look": // Give us the look of the room - will remain the same - Maybe this should be called immediatly on entering...
-		return c.currentMap.CurrentRoom.Look
+		c.Response = c.currentMap.CurrentRoom.Look
+		c.NotifyResponse()
 	case "get": // Get the item in the room
 		if len(cleanedCmd) == 1 {
-			return "Please specify an item"
+			c.Response = "Please specify an item"
+			c.NotifyResponse()
+			return
 		}
 		if !c.currentMap.ItemInRoom(cleanedCmd[1]) {
-			return "That doesn't appear to be here."
+			c.Response = "That doesn't appear to be here."
+			c.NotifyResponse()
+			return
 		}
 		if c.currentPlayer.IsInInv(cleanedCmd[1]) {
-			return "You already have " + cleanedCmd[1]
+			c.Response = "You already have " + cleanedCmd[1]
+			c.NotifyResponse()
+			return
 		}
 		// Save whatever item we get from the room
 		c.currentPlayer.AddToInv(cleanedCmd[1])
 		c.currentDB.SavePlayerInfo(c.currentPlayer)
 
-        // Notify UI of change - Add a signal to the channel
-        c.NotifyInvChange()
-		return "Got " + cleanedCmd[1]
+		// Notify UI of change - Add a signal to the channel
+		c.NotifyInvChange()
+		c.Response = "Got " + cleanedCmd[1]
+		c.NotifyResponse()
 	case "whereami": // Duh
-		return c.currentMap.CurrentRoom.Name
+		c.Response = c.currentMap.CurrentRoom.Name
+		c.NotifyResponse()
 	default:
-		return "Hmm..."
+		c.Response = "Hmm..."
+		c.NotifyResponse()
 	}
 }

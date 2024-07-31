@@ -17,6 +17,7 @@ import (
 type errMsg error
 type item string
 type inventoryUpdateMsg struct{} // Specific type for our inventory channel signal
+type commanderResponseMsg struct{}
 
 var (
 	GameCommander *commander.Commander
@@ -56,11 +57,12 @@ type model struct {
 	inventoryChanges <-chan struct{} // Channel for inventory changes - Same type as commanders - can only recieve...
 
 	// Message model attributes
-	viewport    viewport.Model
-	messages    []string
-	textarea    textarea.Model
-	senderStyle lipgloss.Style
-	err         error
+	viewport        viewport.Model
+	messages        []string
+	textarea        textarea.Model
+	senderStyle     lipgloss.Style
+	err             error
+	messageResponse <-chan struct{}
 }
 
 func (i item) FilterValue() string { return "" }
@@ -82,7 +84,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-func newModel(invChanges <-chan struct{}) model {
+func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) model {
 	// Messages
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
@@ -120,6 +122,7 @@ func newModel(invChanges <-chan struct{}) model {
 		viewport:         vp,
 		senderStyle:      lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
 		err:              nil,
+		messageResponse:  commanderResponse,
 	}
 }
 
@@ -130,15 +133,34 @@ func (m model) Init() tea.Cmd {
 
 // This method returns just returns our custom signal type for our update function to pick it up
 func InventoryUpdateCmd() tea.Cmd {
-    return func() tea.Msg {
-        return inventoryUpdateMsg{}
-    }
+	return func() tea.Msg {
+		return inventoryUpdateMsg{}
+	}
+}
+
+func CommanderResponseCmd() tea.Cmd {
+	return func() tea.Msg {
+		return commanderResponseMsg{}
+	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
+	select {
+	case <-m.messageResponse:
+		cmds = append(cmds, CommanderResponseCmd())
+	default:
+		// No inventory change
+	}
+
 	switch msg := msg.(type) {
+
+    case commanderResponseMsg:
+        m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.Response)
+        m.viewport.SetContent(strings.Join(m.messages, "\n"))
+        m.viewport.GotoBottom()
 
 	case inventoryUpdateMsg: // Inventory change notification was made
 		items := []list.Item{}
@@ -161,16 +183,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			m.messages = append(m.messages, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
-			m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.PlayerCommand(m.textarea.Value()))
-			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.textarea.Reset()
-			m.viewport.GotoBottom()
+			GameCommander.PlayerCommand(m.textarea.Value())
+            m.textarea.Reset()
+            m.viewport.SetContent(strings.Join(m.messages, "\n"))
+            m.viewport.GotoBottom()
 		}
 	}
 
 	select {
 	case <-m.inventoryChanges: // Waits for a signal to be in the buffer - if there is one it calls the command which gives us a inventoryUpdateMsg
-        cmds = append(cmds, InventoryUpdateCmd())
+		cmds = append(cmds, InventoryUpdateCmd())
 	default:
 		// No inventory change
 	}
@@ -197,7 +219,7 @@ func (m model) View() string {
 
 func Start(cmder *commander.Commander) error {
 	GameCommander = cmder
-    p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
+	p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
 	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel))
 
 	if _, err := p.Run(); err != nil {
