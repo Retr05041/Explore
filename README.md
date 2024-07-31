@@ -1,13 +1,5 @@
 # Explore
 Sequal/Rendition of my original text based adventure game "Escape"
 
-### TODO:
-- Need to clean up the playerhandler file...
-    - Seperate file for player / DB?
-    - Player struct inside DB struct?
-    - Lots of error catching for possible wrong inputs... (especially for new player name)
-    - Needs a table constructor dependant on metadata
-    - current room index option...
-    - Save state of player
-- Need to implement commands for: needed item, get an item....
-    - Need to come up with more ideas for commands...
+### Notes:
+- GotoBottom() works, it's just getting screwed up on LONGER messages than the width of the viewport
