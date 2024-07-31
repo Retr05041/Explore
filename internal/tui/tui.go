@@ -16,43 +16,44 @@ import (
 // Custom types
 type errMsg error
 type item string
+type inventoryUpdateMsg struct{}
 
 var (
 	GameCommander *commander.Commander
 
 	// Inventory
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	inventoryStyle    = lipgloss.NewStyle().
-				Width(20). // Be sure to change the values for the textarea and viewport in the message model if you change these
-				Height(23).
-				Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#ffffff"))
+	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle       = lipgloss.NewStyle().PaddingLeft(4)
+	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	inventoryStyle  = lipgloss.NewStyle().
+			Width(20). // Be sure to change the values for the textarea and viewport in the message model if you change these
+			Height(23).
+			Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
 
 		// Focused model
 	viewportStyle = lipgloss.NewStyle().
-				Width(60).
-				Height(19).
-				Align(lipgloss.Left, lipgloss.Top).
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#ffffff"))
+			Width(60).
+			Height(19).
+			Align(lipgloss.Left, lipgloss.Top).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
 
-    textareaStyle = lipgloss.NewStyle().
-				Width(60).
-				Height(1).
-				Align(lipgloss.Left, lipgloss.Top).
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69"))
+	textareaStyle = lipgloss.NewStyle().
+			Width(60).
+			Height(1).
+			Align(lipgloss.Left, lipgloss.Top).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("69"))
 
 	helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 type model struct {
 	// List model attributes
-	inventory list.Model
-	choice    string
+	inventory        list.Model
+	inventoryChanges <-chan struct{} // Channel for inventory changes - Same type as commanders
 
 	// Message model attributes
 	viewport    viewport.Model
@@ -81,7 +82,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-func newModel() model {
+func newModel(invChanges <-chan struct{}) model {
 	// Messages
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
@@ -107,17 +108,18 @@ func newModel() model {
 	l.Title = "Inventory"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-    l.SetShowHelp(false)
+	l.SetShowHelp(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 
 	return model{
-		inventory:   l,
-		textarea:    ta,
-		messages:    []string{},
-		viewport:    vp,
-		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-		err:         nil,
+		inventory:        l,
+		inventoryChanges: invChanges,
+		textarea:         ta,
+		messages:         []string{},
+		viewport:         vp,
+		senderStyle:      lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		err:              nil,
 	}
 }
 
@@ -126,10 +128,30 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(textarea.Blink)
 }
 
+func InventoryUpdateCmd() tea.Cmd {
+    return func() tea.Msg {
+        return inventoryUpdateMsg{}
+    }
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
+
+	case inventoryUpdateMsg: // Inventory change notification
+		items := []list.Item{}
+		for _, newItem := range GameCommander.GetCurrPlayerInv() {
+			items = append(items, item(newItem))
+		}
+		// Update inventory list
+		m.inventory = list.New(items, itemDelegate{}, 20, 21)
+		m.inventory.Title = "Inventory"
+		m.inventory.SetShowStatusBar(false)
+		m.inventory.SetFilteringEnabled(false)
+		m.inventory.SetShowHelp(false)
+		m.inventory.Styles.Title = titleStyle
+		m.inventory.Styles.PaginationStyle = paginationStyle
 
 	case tea.KeyMsg:
 		// If the given command is a key
@@ -145,23 +167,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-    // Update text area and viewport no matter what
-    m.textarea, cmd = m.textarea.Update(msg)
-    cmds = append(cmds, cmd)
-    m.viewport, cmd = m.viewport.Update(msg)
-    cmds = append(cmds, cmd)
+	select {
+	case <-m.inventoryChanges:
+        cmds = append(cmds, InventoryUpdateCmd())
+	default:
+		// No inventory change
+	}
+
+	// Update text area and viewport no matter what
+	m.textarea, cmd = m.textarea.Update(msg)
+	cmds = append(cmds, cmd)
+	m.viewport, cmd = m.viewport.Update(msg)
+	cmds = append(cmds, cmd)
+	m.inventory, cmd = m.inventory.Update(msg)
+	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
 	var s string
-    s += lipgloss.JoinHorizontal(
-        lipgloss.Top, 
-        inventoryStyle.Render(m.inventory.View()), 
-        lipgloss.JoinVertical(
-            lipgloss.Top, 
-            viewportStyle.Render(m.viewport.View()), 
-            textareaStyle.Render(m.textarea.View())))
+	s += lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		inventoryStyle.Render(m.inventory.View()),
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			viewportStyle.Render(m.viewport.View()),
+			textareaStyle.Render(m.textarea.View())))
 
 	s += helpStyle.Render(fmt.Sprintf("\nq: exit\n"))
 	return s
@@ -169,8 +200,8 @@ func (m model) View() string {
 
 func Start(cmder *commander.Commander) error {
 	GameCommander = cmder
-	p := tea.NewProgram(newModel(), tea.WithAltScreen())
-	// p := tea.NewProgram(newModel())
+    p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel), tea.WithAltScreen())
+	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel))
 
 	if _, err := p.Run(); err != nil {
 		return err
