@@ -178,8 +178,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Update text area and viewport no matter what
 	m.textarea, cmd = m.textarea.Update(msg)
 	cmds = append(cmds, cmd)
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
 }
 
