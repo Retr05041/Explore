@@ -16,7 +16,7 @@ import (
 // Custom types
 type errMsg error
 type item string
-type inventoryUpdateMsg struct{}
+type inventoryUpdateMsg struct{} // Specific type for our inventory channel signal
 
 var (
 	GameCommander *commander.Commander
@@ -53,7 +53,7 @@ var (
 type model struct {
 	// List model attributes
 	inventory        list.Model
-	inventoryChanges <-chan struct{} // Channel for inventory changes - Same type as commanders
+	inventoryChanges <-chan struct{} // Channel for inventory changes - Same type as commanders - can only recieve...
 
 	// Message model attributes
 	viewport    viewport.Model
@@ -128,6 +128,7 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(textarea.Blink)
 }
 
+// This method returns just returns our custom signal type for our update function to pick it up
 func InventoryUpdateCmd() tea.Cmd {
     return func() tea.Msg {
         return inventoryUpdateMsg{}
@@ -139,7 +140,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 
-	case inventoryUpdateMsg: // Inventory change notification
+	case inventoryUpdateMsg: // Inventory change notification was made
 		items := []list.Item{}
 		for _, newItem := range GameCommander.GetCurrPlayerInv() {
 			items = append(items, item(newItem))
@@ -168,7 +169,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	select {
-	case <-m.inventoryChanges:
+	case <-m.inventoryChanges: // Waits for a signal to be in the buffer - if there is one it calls the command which gives us a inventoryUpdateMsg
         cmds = append(cmds, InventoryUpdateCmd())
 	default:
 		// No inventory change
@@ -178,8 +179,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.textarea, cmd = m.textarea.Update(msg)
 	cmds = append(cmds, cmd)
 	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
-	m.inventory, cmd = m.inventory.Update(msg)
 	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
 }
@@ -200,7 +199,7 @@ func (m model) View() string {
 
 func Start(cmder *commander.Commander) error {
 	GameCommander = cmder
-    p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel), tea.WithAltScreen())
+    p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
 	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel))
 
 	if _, err := p.Run(); err != nil {

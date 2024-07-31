@@ -7,26 +7,22 @@ import (
 )
 
 type Commander struct {
-	InventoryChangeChannel chan struct{}
+	InventoryChangeChannel chan struct{} // Made the channel a struct type cause it can have no data - i.e. serves as just a signal type
 
 	currentMap    *maphandler.MapInfo
 	currentDB     *playerhandler.Database
 	currentPlayer *playerhandler.Player
 }
 
-// Give the commander the map, db, and player
+// Create a new commander
 func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlayer *playerhandler.Player) *Commander {
 	var tmpCommander Commander
     // Channels
-    tmpCommander.InventoryChangeChannel = make(chan struct{}, 1)
+    tmpCommander.InventoryChangeChannel = make(chan struct{}, 1) // Buffer capacity is set to 1
 
-	// Initialise map
+	// Game Info
 	tmpCommander.currentMap = initMap
-
-	// Load / Create the database for the map
 	tmpCommander.currentDB = initDB
-
-	// Load the player from the database
 	tmpCommander.currentPlayer = initPlayer
 
 	return &tmpCommander
@@ -34,9 +30,9 @@ func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlaye
 
 func (c *Commander) NotifyInvChange() {
     select {
-    case c.InventoryChangeChannel <- struct{}{}:
+    case c.InventoryChangeChannel <- struct{}{}: // When this function is called, an empty struct is sent into the channel - because we made the buffer 1 it succeeds if it can put the empty struct into it
     default:
-        // channel is full, ignore
+        // InventoryChangeChannel is full, ignore
     }
 }
 
@@ -84,7 +80,7 @@ func (c *Commander) PlayerCommand(cmd string) string {
 		c.currentPlayer.AddToInv(cleanedCmd[1])
 		c.currentDB.SavePlayerInfo(c.currentPlayer)
 
-        // Notify UI of change
+        // Notify UI of change - Add a signal to the channel
         c.NotifyInvChange()
 		return "Got " + cleanedCmd[1]
 	case "whereami": // Duh
