@@ -12,6 +12,8 @@ type Commander struct {
 	Response        string
 	ResponseChannel chan struct{}
 
+    QuitChannel chan struct{}
+
 	currentMap    *maphandler.MapInfo
 	currentDB     *playerhandler.Database
 	currentPlayer *playerhandler.Player
@@ -23,6 +25,7 @@ func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlaye
 	// Channels
 	tmpCommander.InventoryChangeChannel = make(chan struct{}, 1) // Buffer capacity is set to 1
 	tmpCommander.ResponseChannel = make(chan struct{}, 1)
+    tmpCommander.QuitChannel = make(chan struct{}, 1)
 
 	// Game Info
 	tmpCommander.currentMap = initMap
@@ -44,7 +47,15 @@ func (c *Commander) NotifyResponse() {
 	select {
 	case c.ResponseChannel <- struct{}{}:
 	default:
-		// InventoryChangeChannel is full, ignore
+		// ResponseChannel full, ignore
+	}
+}
+
+func (c *Commander) NotifyQuit() {
+	select {
+	case c.QuitChannel <- struct{}{}:
+	default:
+		// QuitChannel is full, ignore
 	}
 }
 
@@ -113,6 +124,8 @@ func (c *Commander) PlayerCommand(cmd string) {
 	case "whereami": // Duh
 		c.Response = c.currentMap.CurrentRoom.Name
 		c.NotifyResponse()
+    case "quit":
+        c.NotifyQuit()
 	default:
 		c.Response = "Hmm..."
 		c.NotifyResponse()

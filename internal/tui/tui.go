@@ -18,6 +18,7 @@ type errMsg error
 type item string
 type inventoryUpdateMsg struct{} // Specific type for our inventory channel signal
 type commanderResponseMsg struct{}
+type quitMsg struct{}
 
 var (
 	GameCommander *commander.Commander
@@ -70,6 +71,7 @@ type model struct {
 	senderStyle     lipgloss.Style
 	err             error
 	messageResponse <-chan struct{}
+	quitChannel     <-chan struct{}
 }
 
 func (i item) FilterValue() string { return "" }
@@ -91,7 +93,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) model {
+func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}, quitChannel <-chan struct{}) model {
 	// Messages
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
@@ -128,6 +130,7 @@ func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) mod
 		senderStyle:      lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
 		err:              nil,
 		messageResponse:  commanderResponse,
+		quitChannel:      quitChannel,
 	}
 }
 
@@ -146,6 +149,12 @@ func InventoryUpdateCmd() tea.Cmd {
 func CommanderResponseCmd() tea.Cmd {
 	return func() tea.Msg {
 		return commanderResponseMsg{}
+	}
+}
+
+func CommanderQuitCmd() tea.Cmd {
+	return func() tea.Msg {
+		return quitMsg{}
 	}
 }
 
@@ -190,6 +199,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	select {
+	case <-m.quitChannel:
+		cmds = append(cmds, CommanderQuitCmd())
+	default:
+
+	}
+
+	select {
 	case <-m.messageResponse:
 		cmds = append(cmds, CommanderResponseCmd())
 	default:
@@ -197,6 +213,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+
+    case quitMsg:
+        return m, tea.Quit
 
 	case commanderResponseMsg:
 		appendFormatedMessage(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
@@ -218,8 +237,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// If the given command is a key
 		switch msg.String() {
-		case "q":
-			return m, tea.Quit
 		case "enter":
 			appendFormatedMessage(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
 			GameCommander.PlayerCommand(m.textarea.Value())
@@ -250,13 +267,13 @@ func (m model) View() string {
 			viewportStyle.Render(m.viewport.View()),
 			textareaStyle.Render(m.textarea.View())))
 
-	s += helpStyle.Render(fmt.Sprintf("\nq: exit\n"))
+	s += helpStyle.Render(fmt.Sprintf("\nType 'quit' to exit\n"))
 	return s
 }
 
 func Start(cmder *commander.Commander) error {
 	GameCommander = cmder
-	p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
+	p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel, GameCommander.QuitChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
 	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel))
 
 	if _, err := p.Run(); err != nil {
