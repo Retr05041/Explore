@@ -99,7 +99,7 @@ func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}, qui
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
 	ta.Prompt = "┃ "
-	ta.CharLimit = 15                                // Needs editing
+	ta.CharLimit = 50 // Needs editing
 	ta.SetWidth(textPaneWidth)                       // Same as {model}Style width
 	ta.SetHeight(textPaneHeight)                     // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling

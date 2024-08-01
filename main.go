@@ -20,7 +20,7 @@ func Run() error {
 
 	// Get menu option
 	// 1. List map(s)
-	chosenMap := "prologue" // Placeholder
+	chosenMap := "intro" // Placeholder
 
 	initMap, err := maphandler.InitNewMap("maps/" + chosenMap + ".json")
 	if err != nil {

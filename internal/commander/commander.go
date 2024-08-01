@@ -73,21 +73,23 @@ func (c *Commander) GetCurrPlayerName() string {
 func (c *Commander) PlayerCommand(cmd string) {
 	trimmedCmd := strings.TrimSpace(cmd)
 	cleanedCmd := strings.Fields(trimmedCmd)
-	if len(cleanedCmd) > 2 || len(cleanedCmd) == 0 { // This is so dumb
+	if  len(cleanedCmd) == 0 { // This is so dumb
 		c.Response = "Hmm..."
 		c.NotifyResponse()
 		return
 	}
+    givenCommand := cleanedCmd[0]
+    givenOptions := strings.Join(cleanedCmd[1:], " ")
 
 	// Command prefix switch
-	switch cleanedCmd[0] {
+	switch givenCommand {
 	case "go": // Switch rooms
 		if len(cleanedCmd) == 1 {
 			c.Response = "Please specify a direction"
 			c.NotifyResponse()
 			return
 		}
-		if !c.currentMap.MoveDirection(cleanedCmd[1], c.currentPlayer.Inventory) {
+		if !c.currentMap.MoveDirection(givenOptions, c.currentPlayer.Inventory) {
 			c.Response = "Could not move there"
 			c.NotifyResponse()
 			return
@@ -103,23 +105,23 @@ func (c *Commander) PlayerCommand(cmd string) {
 			c.NotifyResponse()
 			return
 		}
-		if !c.currentMap.ItemInRoom(cleanedCmd[1]) {
+		if !c.currentMap.ItemInRoom(givenOptions) {
 			c.Response = "That doesn't appear to be here."
 			c.NotifyResponse()
 			return
 		}
-		if c.currentPlayer.IsInInv(cleanedCmd[1]) {
-			c.Response = "You already have " + cleanedCmd[1]
+		if c.currentPlayer.IsInInv(givenOptions) {
+			c.Response = "You already have " + givenOptions
 			c.NotifyResponse()
 			return
 		}
 		// Save whatever item we get from the room
-		c.currentPlayer.AddToInv(cleanedCmd[1])
+		c.currentPlayer.AddToInv(givenOptions)
 		c.currentDB.SavePlayerInfo(c.currentPlayer)
 
 		// Notify UI of change - Add a signal to the channel
 		c.NotifyInvChange()
-		c.Response = "Got " + cleanedCmd[1]
+		c.Response = "Got " + givenOptions 
 		c.NotifyResponse()
 	case "whereami": // Duh
 		c.Response = c.currentMap.CurrentRoom.Name
