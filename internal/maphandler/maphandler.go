@@ -11,6 +11,7 @@ type metaData struct {
 }
 
 type room struct {
+	Index      int     `json:"index"`
 	Name       string  `json:"name"`
 	NeededItem *string `json:"needed item"`
 	North      *int    `json:"north"`

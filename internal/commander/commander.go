@@ -126,6 +126,13 @@ func (c *Commander) PlayerCommand(cmd string) {
 		c.NotifyResponse()
     case "quit":
         c.NotifyQuit()
+    case "escape":
+        if c.currentMap.CurrentRoom.Index == c.currentMap.MetaData.EndRoomIndex {
+            c.NotifyQuit()
+        } else {
+            c.Response = "You cannot escape from this room"
+            c.NotifyResponse()
+        }
 	default:
 		c.Response = "Hmm..."
 		c.NotifyResponse()
