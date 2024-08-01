@@ -1,5 +1,5 @@
 # Explore
-*An over-engineered JSON parser for a niche group of indivduals"
+*An over-engineered JSON parser for a niche group of indivduals*
 
 ## What is it?
 Explore is a player-first text based adventure game
