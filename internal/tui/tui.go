@@ -22,15 +22,20 @@ type commanderResponseMsg struct{}
 var (
 	GameCommander *commander.Commander
 
-    viewPaneWidth = 60
+	viewPaneWidth  = 60
+	viewPaneHeight = 20
+	invPaneWidth   = 20
+	invPaneHeight  = 23
+	textPaneWidth  = viewPaneWidth
+	textPaneHeight = 1
 
 	// Inventory
 	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
 	itemStyle       = lipgloss.NewStyle().PaddingLeft(4)
 	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	inventoryStyle  = lipgloss.NewStyle().
-			Width(20). // Be sure to change the values for the textarea and viewport in the message model if you change these
-			Height(23).
+			Width(invPaneWidth). // Be sure to change the values for the textarea and viewport in the message model if you change these
+			Height(invPaneHeight).
 			Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("#ffffff"))
@@ -38,14 +43,14 @@ var (
 		// Focused model
 	viewportStyle = lipgloss.NewStyle().
 			Width(viewPaneWidth).
-			Height(19).
+			Height(viewPaneHeight).
 			Align(lipgloss.Left, lipgloss.Top).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("#ffffff"))
 
 	textareaStyle = lipgloss.NewStyle().
-			Width(60).
-			Height(1).
+			Width(textPaneWidth).
+			Height(textPaneHeight).
 			Align(lipgloss.Left, lipgloss.Top).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("69"))
@@ -93,11 +98,11 @@ func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) mod
 	ta.Focus()
 	ta.Prompt = "┃ "
 	ta.CharLimit = 15                                // Needs editing
-	ta.SetWidth(60)                                  // Same as {model}Style width
-	ta.SetHeight(1)                                  // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
+	ta.SetWidth(textPaneWidth)                       // Same as {model}Style width
+	ta.SetHeight(textPaneHeight)                     // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling
 	ta.ShowLineNumbers = false
-	vp := viewport.New(viewPaneWidth, 20)
+	vp := viewport.New(viewPaneWidth, viewPaneHeight)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Inventory
@@ -106,9 +111,7 @@ func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) mod
 		items = append(items, item(baseItem))
 	}
 
-	const defaultWidth = 20
-	const defaultHeight = 21 // Cause the textarea adds 1 height as well
-	l := list.New(items, itemDelegate{}, defaultWidth, defaultHeight)
+	l := list.New(items, itemDelegate{}, invPaneWidth, invPaneHeight)
 	l.Title = "Inventory"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
@@ -168,18 +171,18 @@ func appendFormatedMessage(m *model, msg string) {
 		currentChunk.WriteString(word)
 	}
 
-    // Add the last chunk if it's not empty
+	// Add the last chunk if it's not empty
 	if currentChunk.Len() > 0 {
 		result = append(result, currentChunk.String())
 	}
 
-    // Add the correctly sized messages to the viewport
-    for _, message := range result {
-        m.messages = append(m.messages, message)
-    }
+	// Add the correctly sized messages to the viewport
+	for _, message := range result {
+		m.messages = append(m.messages, message)
+	}
 
-    m.viewport.SetContent(strings.Join(m.messages, "\n"))
-    m.viewport.GotoBottom()
+	m.viewport.SetContent(strings.Join(m.messages, "\n"))
+	m.viewport.GotoBottom()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -195,8 +198,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 
-    case commanderResponseMsg:
-        appendFormatedMessage(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
+	case commanderResponseMsg:
+		appendFormatedMessage(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
 
 	case inventoryUpdateMsg: // Inventory change notification was made
 		items := []list.Item{}
@@ -204,7 +207,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			items = append(items, item(newItem))
 		}
 		// Update inventory list
-		m.inventory = list.New(items, itemDelegate{}, 20, 21)
+		m.inventory = list.New(items, itemDelegate{}, invPaneWidth, invPaneHeight)
 		m.inventory.Title = "Inventory"
 		m.inventory.SetShowStatusBar(false)
 		m.inventory.SetFilteringEnabled(false)
@@ -215,12 +218,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// If the given command is a key
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "q":
 			return m, tea.Quit
 		case "enter":
 			appendFormatedMessage(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
 			GameCommander.PlayerCommand(m.textarea.Value())
-            m.textarea.Reset()
+			m.textarea.Reset()
 		}
 	}
 
