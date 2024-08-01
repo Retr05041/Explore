@@ -146,13 +146,13 @@ func CommanderResponseCmd() tea.Cmd {
 	}
 }
 
-func appendMsg(m *model, msg string) {
+func appendFormatedMessage(m *model, msg string) {
 	var result []string
-	var currentChunk strings.Builder
+	var currentChunk strings.Builder // efficiently build strings - minimizes memory copying
 
-	words := strings.Fields(msg)
+	words := strings.Fields(msg) // splits the string by spaces into a slice - empty slice if msg only contains white space
 	for _, word := range words {
-		// Check if adding this word would exceed the maxSize
+		// Check if adding this word would exceed the viewPaneWidth
 		if currentChunk.Len()+len(word)+1 > viewPaneWidth {
 			// If the current chunk is not empty, add it to the result
 			if currentChunk.Len() > 0 {
@@ -168,11 +168,12 @@ func appendMsg(m *model, msg string) {
 		currentChunk.WriteString(word)
 	}
 
-	// Add the last chunk if it's not empty
+    // Add the last chunk if it's not empty
 	if currentChunk.Len() > 0 {
 		result = append(result, currentChunk.String())
 	}
 
+    // Add the correctly sized messages to the viewport
     for _, message := range result {
         m.messages = append(m.messages, message)
     }
@@ -195,7 +196,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
     case commanderResponseMsg:
-        appendMsg(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
+        appendFormatedMessage(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
 
 	case inventoryUpdateMsg: // Inventory change notification was made
 		items := []list.Item{}
@@ -217,7 +218,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
-			appendMsg(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
+			appendFormatedMessage(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
 			GameCommander.PlayerCommand(m.textarea.Value())
             m.textarea.Reset()
 		}
