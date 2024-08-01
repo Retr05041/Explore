@@ -22,6 +22,8 @@ type commanderResponseMsg struct{}
 var (
 	GameCommander *commander.Commander
 
+    viewPaneWidth = 60
+
 	// Inventory
 	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
 	itemStyle       = lipgloss.NewStyle().PaddingLeft(4)
@@ -35,7 +37,7 @@ var (
 
 		// Focused model
 	viewportStyle = lipgloss.NewStyle().
-			Width(60).
+			Width(viewPaneWidth).
 			Height(19).
 			Align(lipgloss.Left, lipgloss.Top).
 			BorderStyle(lipgloss.NormalBorder()).
@@ -95,7 +97,7 @@ func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}) mod
 	ta.SetHeight(1)                                  // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling
 	ta.ShowLineNumbers = false
-	vp := viewport.New(60, 20)
+	vp := viewport.New(viewPaneWidth, 20)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Inventory
@@ -144,6 +146,41 @@ func CommanderResponseCmd() tea.Cmd {
 	}
 }
 
+func appendMsg(m *model, msg string) {
+	var result []string
+	var currentChunk strings.Builder
+
+	words := strings.Fields(msg)
+	for _, word := range words {
+		// Check if adding this word would exceed the maxSize
+		if currentChunk.Len()+len(word)+1 > viewPaneWidth {
+			// If the current chunk is not empty, add it to the result
+			if currentChunk.Len() > 0 {
+				result = append(result, currentChunk.String())
+				currentChunk.Reset()
+			}
+		}
+
+		// Add the word to the current chunk
+		if currentChunk.Len() > 0 {
+			currentChunk.WriteString(" ")
+		}
+		currentChunk.WriteString(word)
+	}
+
+	// Add the last chunk if it's not empty
+	if currentChunk.Len() > 0 {
+		result = append(result, currentChunk.String())
+	}
+
+    for _, message := range result {
+        m.messages = append(m.messages, message)
+    }
+
+    m.viewport.SetContent(strings.Join(m.messages, "\n"))
+    m.viewport.GotoBottom()
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -158,9 +195,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
     case commanderResponseMsg:
-        m.messages = append(m.messages, m.senderStyle.Render("God: ")+GameCommander.Response)
-        m.viewport.SetContent(strings.Join(m.messages, "\n"))
-        m.viewport.GotoBottom()
+        appendMsg(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
 
 	case inventoryUpdateMsg: // Inventory change notification was made
 		items := []list.Item{}
@@ -182,11 +217,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
-			m.messages = append(m.messages, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
+			appendMsg(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
 			GameCommander.PlayerCommand(m.textarea.Value())
             m.textarea.Reset()
-            m.viewport.SetContent(strings.Join(m.messages, "\n"))
-            m.viewport.GotoBottom()
 		}
 	}
 
@@ -220,7 +253,7 @@ func (m model) View() string {
 func Start(cmder *commander.Commander) error {
 	GameCommander = cmder
 	p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
-	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel))
+	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel))
 
 	if _, err := p.Run(); err != nil {
 		return err
