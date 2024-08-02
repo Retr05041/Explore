@@ -56,6 +56,14 @@ var (
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("69"))
 
+
+	infoStyle = lipgloss.NewStyle().
+			Width(invPaneWidth). // Be sure to change the values for the textarea and viewport in the message model if you change these
+			Height(invPaneHeight).
+			Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
+
 	helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 

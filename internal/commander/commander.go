@@ -32,6 +32,8 @@ func Init(initMap *maphandler.MapInfo, initDB *playerhandler.Database, initPlaye
 	tmpCommander.currentDB = initDB
 	tmpCommander.currentPlayer = initPlayer
 
+    tmpCommander.currentMap.HardSetRoom(tmpCommander.currentPlayer.CurrentRoomIndex)
+
 	return &tmpCommander
 }
 
@@ -94,6 +96,9 @@ func (c *Commander) PlayerCommand(cmd string) {
 			c.NotifyResponse()
 			return
 		}
+
+        c.currentDB.SaveCurrentRoom(c.currentPlayer, c.currentMap.CurrentRoom.Index)
+
 		c.Response = "Moved to " + c.currentMap.CurrentRoom.Name
         c.NotifyResponse()
 	case "look": // Give us the look of the room - will remain the same - Maybe this should be called immediatly on entering...
@@ -117,7 +122,7 @@ func (c *Commander) PlayerCommand(cmd string) {
 		}
 		// Save whatever item we get from the room
 		c.currentPlayer.AddToInv(givenOptions)
-		c.currentDB.SavePlayerInfo(c.currentPlayer)
+		c.currentDB.SavePlayerInv(c.currentPlayer)
 
 		// Notify UI of change - Add a signal to the channel
 		c.NotifyInvChange()

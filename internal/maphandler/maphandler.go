@@ -88,6 +88,11 @@ func (m *MapInfo) MoveDirection(direction string, playerInv []string) bool {
 	return true
 }
 
+// For commander to use during setup
+func (m *MapInfo) HardSetRoom(roomIndex int) {
+    m.CurrentRoom = m.Rooms[roomIndex]
+}
+
 // Checks if item is in the current room
 func (m *MapInfo) ItemInRoom(item string) bool {
 	if m.CurrentRoom.Item == nil {

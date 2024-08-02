@@ -24,6 +24,7 @@ type Player struct {
 	ID        int
 	Name      string
 	Inventory []string
+    CurrentRoomIndex int
 }
 
 // Loads the database corresponding to the map
@@ -48,7 +49,8 @@ func (db *Database) InitTables() error {
 	query := `
     CREATE TABLE IF NOT EXISTS players(
         player_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        player_name TEXT NOT NULL UNIQUE 
+        player_name TEXT NOT NULL UNIQUE, 
+        curr_room_index SMALLINT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS inventory(
         inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +66,7 @@ func (db *Database) InitTables() error {
 
 // Populate the player struct given a player name (each one is uniue) -- This and CreatePlayer will need to be conjoined in some way, this will take effect when the menu comes into play
 func (db *Database) LoadPlayer(playername string) (*Player, error) {
-	// Load Player
+	// Load Player Name
 	row := db.inst.QueryRow("SELECT player_id FROM players WHERE player_name=?", playername)
 
 	var player Player
@@ -75,6 +77,18 @@ func (db *Database) LoadPlayer(playername string) (*Player, error) {
 		}
 		return nil, err
 	}
+
+	// Load Player room
+	row = db.inst.QueryRow("SELECT curr_room_index FROM players WHERE player_name=?", playername)
+
+	if err := row.Scan(&player.CurrentRoomIndex); err != nil {
+		// this is where we catch out errors for selecting a player
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotExists
+		}
+		return nil, err
+	}
+
     player.Name = playername // Since there was no errors when finding the player in the DB
 
 	// Load Inv
@@ -100,8 +114,8 @@ func (db *Database) LoadPlayer(playername string) (*Player, error) {
 }
 
 // Create a player if they don't exist
-func (db *Database) CreatePlayer(name string) error {
-	_, err := db.inst.Exec("INSERT INTO players(player_name) VALUES(?)", name)
+func (db *Database) CreatePlayer(name string, startingRoom int) error {
+	_, err := db.inst.Exec("INSERT INTO players(player_name, curr_room_index) VALUES(?,?)", name, startingRoom)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) {
@@ -131,7 +145,7 @@ func (p *Player) IsInInv(item string) bool {
 }
 
 // Saves the current player (player will exist every time, as you either selected the player or created a new one
-func (db *Database) SavePlayerInfo(p *Player) error {
+func (db *Database) SavePlayerInv(p *Player) error {
 	for _, item := range p.Inventory {
         var exists bool
 		row := db.inst.QueryRow("SELECT EXISTS (SELECT 1 FROM inventory WHERE player_id = ? AND item = ?)", p.ID, item)
@@ -146,7 +160,14 @@ func (db *Database) SavePlayerInfo(p *Player) error {
                 return err
             }
         }
-
 	}
 	return nil
+}
+
+func (db *Database) SaveCurrentRoom(p *Player, currRoomIndex int) error {
+    _, err := db.inst.Exec("UPDATE players SET curr_room_index=? WHERE player_id=?", currRoomIndex, p.ID)
+    if err != nil {
+        return err
+    }
+    return nil
 }

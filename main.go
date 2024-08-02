@@ -35,7 +35,7 @@ func Run() error {
 
 	// 3. Get player name / create a player name
 	chosenName := "player1" // Placeholder
-	DB.CreatePlayer(chosenName) // This is here cause we don't have a menu with a "create player" option, so we need to create one every time
+	DB.CreatePlayer(chosenName, initMap.MetaData.StartRoomIndex) // This is here cause we don't have a menu with a "create player" option, so we need to create one every time
 
 	player, err := DB.LoadPlayer(chosenName)
 	if err != nil {
