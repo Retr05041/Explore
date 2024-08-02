@@ -1,13 +1,18 @@
 # Explore
-Sequal/Rendition of my original text based adventure game "Escape"
+*An over-engineered JSON parser for a niche group of indivduals*
 
-### TODO:
-- Need to clean up the playerhandler file...
-    - Seperate file for player / DB?
-    - Player struct inside DB struct?
-    - Lots of error catching for possible wrong inputs... (especially for new player name)
-    - Needs a table constructor dependant on metadata
-    - current room index option...
-    - Save state of player
-- Need to implement commands for: needed item, get an item....
-    - Need to come up with more ideas for commands...
+## What is it?
+Explore is a player-first text based adventure game
+
+JSON files make up the map and meta data used to save player progress withing that game
+
+## How to run?
+Building from source:
+
+Dependancies:
+    - [Go](https://go.dev/)
+    - Make 
+
+To run (without compiling): `make`
+
+Compile to executable: `make build`

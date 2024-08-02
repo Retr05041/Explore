@@ -11,6 +11,7 @@ type metaData struct {
 }
 
 type room struct {
+	Index      int     `json:"index"`
 	Name       string  `json:"name"`
 	NeededItem *string `json:"needed item"`
 	North      *int    `json:"north"`
@@ -85,6 +86,11 @@ func (m *MapInfo) MoveDirection(direction string, playerInv []string) bool {
 		return false
 	}
 	return true
+}
+
+// For commander to use during setup
+func (m *MapInfo) HardSetRoom(roomIndex int) {
+    m.CurrentRoom = m.Rooms[roomIndex]
 }
 
 // Checks if item is in the current room

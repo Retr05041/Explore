@@ -13,57 +13,73 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Have to make types for bubbletea to understand when it comes to the update function
-type sessionState uint
+// Custom types
 type errMsg error
-
-// list types
 type item string
-
-const (
-	inventoryHeight              = 10
-	messageView     sessionState = iota
-	listView
-)
+type inventoryUpdateMsg struct{} // Specific type for our inventory channel signal
+type commanderResponseMsg struct{}
+type quitMsg struct{}
 
 var (
-	// Inventory
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	GameCommander *commander.Commander
 
-	// unfocused model
-	unfocusedModelStyle = lipgloss.NewStyle().
-				Width(60). // Be sure to change the values for the textarea and viewport in the message model if you change these
-				Height(20).
-				Align(lipgloss.Left, lipgloss.Bottom). // Sets alignment of content within the model
-				BorderStyle(lipgloss.HiddenBorder())
+	viewPaneWidth  = 60
+	viewPaneHeight = 20
+	invPaneWidth   = 20
+	invPaneHeight  = 23
+	textPaneWidth  = viewPaneWidth
+	textPaneHeight = 1
+
+	// Inventory
+	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle       = lipgloss.NewStyle().PaddingLeft(1)
+	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	inventoryStyle  = lipgloss.NewStyle().
+			Width(invPaneWidth). // Be sure to change the values for the textarea and viewport in the message model if you change these
+			Height(invPaneHeight).
+			Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
 
 		// Focused model
-	focusedModelStyle = lipgloss.NewStyle().
-				Width(60).
-				Height(20).
-				Align(lipgloss.Left, lipgloss.Bottom).
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69"))
+	viewportStyle = lipgloss.NewStyle().
+			Width(viewPaneWidth).
+			Height(viewPaneHeight).
+			Align(lipgloss.Left, lipgloss.Top).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
+
+	textareaStyle = lipgloss.NewStyle().
+			Width(textPaneWidth).
+			Height(textPaneHeight).
+			Align(lipgloss.Left, lipgloss.Top).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("69"))
+
+
+	infoStyle = lipgloss.NewStyle().
+			Width(invPaneWidth). // Be sure to change the values for the textarea and viewport in the message model if you change these
+			Height(invPaneHeight).
+			Align(lipgloss.Left, lipgloss.Top). // Sets alignment of content within the model
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#ffffff"))
 
 	helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 type model struct {
-	state sessionState
-
 	// List model attributes
-	inventory list.Model
-	choice    string
+	inventory        list.Model
+	inventoryChanges <-chan struct{} // Channel for inventory changes - Same type as commanders - can only recieve...
 
 	// Message model attributes
-	viewport    viewport.Model
-	messages    []string
-	textarea    textarea.Model
-	senderStyle lipgloss.Style
-	err         error
+	viewport        viewport.Model
+	messages        []string
+	textarea        textarea.Model
+	senderStyle     lipgloss.Style
+	err             error
+	messageResponse <-chan struct{}
+	quitChannel     <-chan struct{}
 }
 
 func (i item) FilterValue() string { return "" }
@@ -82,52 +98,47 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	str := fmt.Sprintf("%d. %s", index+1, i)
 
 	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
-		}
-	}
-
 	fmt.Fprint(w, fn(str))
 }
 
-func newModel() model {
+func newModel(invChanges <-chan struct{}, commanderResponse <-chan struct{}, quitChannel <-chan struct{}) model {
 	// Messages
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
 	ta.Prompt = "┃ "
-	ta.CharLimit = 15                                // Needs editing
-	ta.SetWidth(60)                                  // Same as {model}Style width
-	ta.SetHeight(1)                                  // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
+	ta.CharLimit = 50 // Needs editing
+	ta.SetWidth(textPaneWidth)                       // Same as {model}Style width
+	ta.SetHeight(textPaneHeight)                     // Cause I want just one line for users to enter messsages (I believe this adds 1 BELOW the viewport, making the message model have more height... see viewMessage)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line styling
 	ta.ShowLineNumbers = false
-	vp := viewport.New(60, 20)
+	vp := viewport.New(viewPaneWidth, viewPaneHeight)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Inventory
 	items := []list.Item{}
-	for _, baseItem := range commander.GetCurrPlayerInv() {
+	for _, baseItem := range GameCommander.GetCurrPlayerInv() {
 		items = append(items, item(baseItem))
 	}
 
-	const defaultWidth = 20
-	l := list.New(items, itemDelegate{}, defaultWidth, inventoryHeight)
+	l := list.New(items, itemDelegate{}, invPaneWidth, invPaneHeight)
 	l.Title = "Inventory"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
+	l.SetShowHelp(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
 
 	return model{
-		state:       messageView,
-		inventory:   l,
-		textarea:    ta,
-		messages:    []string{},
-		viewport:    vp,
-		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-		err:         nil,
+		inventory:        l,
+		inventoryChanges: invChanges,
+		textarea:         ta,
+		messages:         []string{},
+		viewport:         vp,
+		senderStyle:      lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		err:              nil,
+		messageResponse:  commanderResponse,
+		quitChannel:      quitChannel,
 	}
 }
 
@@ -136,81 +147,145 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(textarea.Blink)
 }
 
+// This method returns just returns our custom signal type for our update function to pick it up
+func InventoryUpdateCmd() tea.Cmd {
+	return func() tea.Msg {
+		return inventoryUpdateMsg{}
+	}
+}
+
+func CommanderResponseCmd() tea.Cmd {
+	return func() tea.Msg {
+		return commanderResponseMsg{}
+	}
+}
+
+func CommanderQuitCmd() tea.Cmd {
+	return func() tea.Msg {
+		return quitMsg{}
+	}
+}
+
+func appendFormatedMessage(m *model, msg string) {
+	var result []string
+	var currentChunk strings.Builder // efficiently build strings - minimizes memory copying
+
+	words := strings.Fields(msg) // splits the string by spaces into a slice - empty slice if msg only contains white space
+	for _, word := range words {
+		// Check if adding this word would exceed the viewPaneWidth
+		if currentChunk.Len()+len(word)+1 > viewPaneWidth {
+			// If the current chunk is not empty, add it to the result
+			if currentChunk.Len() > 0 {
+				result = append(result, currentChunk.String())
+				currentChunk.Reset()
+			}
+		}
+
+		// Add the word to the current chunk
+		if currentChunk.Len() > 0 {
+			currentChunk.WriteString(" ")
+		}
+		currentChunk.WriteString(word)
+	}
+
+	// Add the last chunk if it's not empty
+	if currentChunk.Len() > 0 {
+		result = append(result, currentChunk.String())
+	}
+
+	// Add the correctly sized messages to the viewport
+	for _, message := range result {
+		m.messages = append(m.messages, message)
+	}
+
+	m.viewport.SetContent(strings.Join(m.messages, "\n"))
+	m.viewport.GotoBottom()
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
+	select {
+	case <-m.quitChannel:
+		cmds = append(cmds, CommanderQuitCmd())
+	default:
+
+	}
+
+	select {
+	case <-m.messageResponse:
+		cmds = append(cmds, CommanderResponseCmd())
+	default:
+		// No inventory change
+	}
+
 	switch msg := msg.(type) {
+
+    case quitMsg:
+        return m, tea.Quit
+
+	case commanderResponseMsg:
+		appendFormatedMessage(&m, m.senderStyle.Render("God: ")+GameCommander.Response)
+
+	case inventoryUpdateMsg: // Inventory change notification was made
+		items := []list.Item{}
+		for _, newItem := range GameCommander.GetCurrPlayerInv() {
+			items = append(items, item(newItem))
+		}
+		// Update inventory list
+		m.inventory = list.New(items, itemDelegate{}, invPaneWidth, invPaneHeight)
+		m.inventory.Title = "Inventory"
+		m.inventory.SetShowStatusBar(false)
+		m.inventory.SetFilteringEnabled(false)
+		m.inventory.SetShowHelp(false)
+		m.inventory.Styles.Title = titleStyle
+		m.inventory.Styles.PaginationStyle = paginationStyle
 
 	case tea.KeyMsg:
 		// If the given command is a key
 		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "tab":
-			if m.state == messageView {
-				m.state = listView
-			} else {
-				m.state = messageView
-			}
 		case "enter":
-			if m.state == listView {
-				i, ok := m.inventory.SelectedItem().(item)
-				if ok {
-					m.choice = string(i)
-				}
-			} else {
-				m.messages = append(m.messages, m.senderStyle.Render(commander.GetCurrPlayerName()+": ")+m.textarea.Value())
-				m.messages = append(m.messages, m.senderStyle.Render("God: ")+commander.PlayerCommand(m.textarea.Value()))
-				m.viewport.SetContent(strings.Join(m.messages, "\n"))
-				m.textarea.Reset()
-				m.viewport.GotoBottom()
-			}
-		}
-
-		// Update whichever model is focused
-		switch m.state {
-		case listView:
-			for index, invItem := range commander.GetCurrPlayerInv() { // BROKEN ON THIS AREA
-				m.inventory.InsertItem(index, item(invItem))
-			}
-			m.inventory, cmd = m.inventory.Update(msg)
-			cmds = append(cmds, cmd)
-		default:
-			m.textarea, cmd = m.textarea.Update(msg)
-			cmds = append(cmds, cmd)
-			m.viewport, cmd = m.viewport.Update(msg)
-			cmds = append(cmds, cmd)
+			appendFormatedMessage(&m, m.senderStyle.Render(GameCommander.GetCurrPlayerName()+": ")+m.textarea.Value())
+			GameCommander.PlayerCommand(m.textarea.Value())
+			m.textarea.Reset()
 		}
 	}
-	return m, tea.Batch(cmds...)
-}
 
-// For Viewing two things at once when entering the View() function
-func (m model) viewMessage() string {
-	return fmt.Sprintf(
-		"%s\n%s",
-		m.viewport.View(),
-		m.textarea.View(), // This is what causes the height increase I believe...
-	)
+	select {
+	case <-m.inventoryChanges: // Waits for a signal to be in the buffer - if there is one it calls the command which gives us a inventoryUpdateMsg
+		cmds = append(cmds, InventoryUpdateCmd())
+	default:
+		// No inventory change
+	}
+
+	// Update text area and viewport no matter what
+	m.textarea, cmd = m.textarea.Update(msg)
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
 	var s string
-	if m.state == listView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(m.inventory.View()), unfocusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage())))
-	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, unfocusedModelStyle.Render(m.inventory.View()), focusedModelStyle.Render(fmt.Sprintf("%4s", m.viewMessage()))) // viewMessage is needed so we can work with this line here nicely
-	}
-	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • q: exit\n"))
+	s += lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		inventoryStyle.Render(m.inventory.View()),
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			viewportStyle.Render(m.viewport.View()),
+			textareaStyle.Render(m.textarea.View())))
+
+	s += helpStyle.Render(fmt.Sprintf("\nType 'quit' to exit\n"))
 	return s
 }
 
-func Start() error {
-	p := tea.NewProgram(newModel(), tea.WithAltScreen())
-	// p := tea.NewProgram(newModel())
+func Start(cmder *commander.Commander) error {
+	GameCommander = cmder
+	p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel, GameCommander.QuitChannel), tea.WithAltScreen()) // Send the inv channel to the model to be monitored
+	// p := tea.NewProgram(newModel(GameCommander.InventoryChangeChannel, GameCommander.ResponseChannel))
 
 	if _, err := p.Run(); err != nil {
-        return err
+		return err
 	}
-    return nil
+	return nil
 }

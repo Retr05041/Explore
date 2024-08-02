@@ -20,7 +20,7 @@ func Run() error {
 
 	// Get menu option
 	// 1. List map(s)
-	chosenMap := "prologue" // Placeholder
+	chosenMap := "intro" // Placeholder
 
 	initMap, err := maphandler.InitNewMap("maps/" + chosenMap + ".json")
 	if err != nil {
@@ -35,7 +35,7 @@ func Run() error {
 
 	// 3. Get player name / create a player name
 	chosenName := "player1" // Placeholder
-	DB.CreatePlayer(chosenName) // This is here cause we don't have a menu with a "create player" option, so we need to create one every time
+	DB.CreatePlayer(chosenName, initMap.MetaData.StartRoomIndex) // This is here cause we don't have a menu with a "create player" option, so we need to create one every time
 
 	player, err := DB.LoadPlayer(chosenName)
 	if err != nil {
@@ -43,9 +43,9 @@ func Run() error {
 	}
 
     // Commander
-	commander.Init(initMap, DB, player) // Run tui once commander is setup
+    GameCommander := commander.Init(initMap, DB, player) // Run tui once commander is setup
     // TUI
-	tui.Start()
+	tui.Start(GameCommander)
 
 	return nil
 }

@@ -6,6 +6,7 @@
 
     "GAME": [
         {
+            "index": 0,
             "name": "Your Room",
             "needed item": null,
             "north": null,
@@ -16,6 +17,7 @@
             "look": "The coldness of your room chills you to the bone, you see a door to the south and a key laying on the floor."
         },
         {
+            "index": 1,
             "name": "The Hallway",
             "needed item": "key",
             "north": 0,
@@ -26,6 +28,7 @@
             "look": "A half open door is to your south, your bedroom door is still open. A soul floats in front of you."
         },
         {
+            "index": 2,
             "name": "Outside",
             "needed item": "soul",
             "north": 1,

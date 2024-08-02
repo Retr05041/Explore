@@ -1,0 +1,140 @@
+{
+    "METADATA": {
+        "start": 0,
+        "end": 11 
+    },
+
+    "GAME": [
+        {
+            "index": 0,
+            "name": "Your Room",
+            "needed item": null,
+            "north": null,
+            "east": null,
+            "south": 1,
+            "west": null,
+            "item": "hallway key",
+            "look": "The coldness of your room chills you to the bone, you see a door to the south. ~ hallway key"
+        },
+        {
+            "index": 1,
+            "name": "The Hallway",
+            "needed item": "hallway key",
+            "north": null,
+            "east": 2,
+            "south": 3,
+            "west": null,
+            "item": "living room key",
+            "look": "A horror movies dream place, a half open door is to your east and south, your bedroom door is still open. ~ living room key"
+        },
+        {
+            "index": 2,
+            "name": "The Closet",
+            "needed item": null,
+            "north": null,
+            "east": null,
+            "south": null,
+            "west": 1,
+            "item": "dining room key",
+            "look": "A nice smell fills your nose as you smell the dead rat beside you, good thing you left the door to your west open. ~ dining room key"
+        },
+        {
+            "index": 3,
+            "name": "The Movie Room",
+            "needed item": null,
+            "north": 1,
+            "east": 5,
+            "south": 4,
+            "west": null,
+            "item": "front door key",
+            "look": "Good memories fill your brain, then get smushed by the darkness, the hallway is north of you, a door is to your east and south. ~ front door key"
+        },
+        {
+            "index": 4,
+            "name": "The Play Room",
+            "needed item": "play room key",
+            "north": 3,
+            "east": null,
+            "south": null,
+            "west": null,
+            "item": "office key",
+            "look": "Your old toys give you joy in this cold darkness, the door you came through is north. ~ office key"
+        },
+        {
+            "index": 5,
+            "name": "The Living Room",
+            "needed item": "living room key",
+            "north": null,
+            "east": 6,
+            "south": 10,
+            "west": 3,
+            "item": "play room key",
+            "look": "You can see the white moon seeping through the front door to the south, your fathers faveroute place is to the east. ~ play room key"
+        },
+        {
+            "index": 6,
+            "name": "The Office",
+            "needed item": "office key",
+            "north": 8,
+            "east": null,
+            "south": 7,
+            "west": 5,
+            "item": "kitchen key",
+            "look": "You dont recognize this place as your father never let you in, unless to go to the kitchen, south and north are where doors are. ~ kitchen key"
+        },
+        {
+            "index": 7,
+            "name": "The Dining Room",
+            "needed item": "dining room key",
+            "north": 6,
+            "east": null,
+            "south": null,
+            "west": null,
+            "item": "dark room key",
+            "look": "You get a tad bit starved seeing this place, a door is to the south and a hidden door is down below your feet. ~ dark room key"
+        },
+        {
+            "index": 8,
+            "name": "The Dark Room",
+            "needed item": "dark room key",
+            "north": null,
+            "east": null,
+            "south": 6,
+            "west": 9,
+            "item": null,
+            "look": "You are to afraid to open your eyes, but the smell of food is drawing you west."
+        },
+        {
+            "index": 9,
+            "name": "The Kitchen",
+            "needed item": "kitchen key",
+            "north": null,
+            "east": 8,
+            "south": null,
+            "west": null,
+            "item": "mud room key",
+            "look": "You see the dirty white floors and the tinted windows as you make your way in, you better go back east. ~ mud room key"
+        },
+        {
+            "index": 10,
+            "name": "The Mud Room",
+            "needed item": "mud room key",
+            "north": 5,
+            "east": null,
+            "south": 11,
+            "west": null,
+            "item": null,
+            "look": "The smell of fresh air make you feel like life might be worth living, you can see your lawn south."
+        },
+        {
+            "index": 11,
+            "name": "Outside",
+            "needed item": "front door key",
+            "north": 10,
+            "east": null,
+            "south": null,
+            "west": null,
+            "look": "Nothing but blue skys and sunshine."
+        }
+    ]
+}
