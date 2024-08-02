@@ -32,7 +32,7 @@ var (
 
 	// Inventory
 	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle       = lipgloss.NewStyle().PaddingLeft(4)
+	itemStyle       = lipgloss.NewStyle().PaddingLeft(1)
 	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	inventoryStyle  = lipgloss.NewStyle().
 			Width(invPaneWidth). // Be sure to change the values for the textarea and viewport in the message model if you change these

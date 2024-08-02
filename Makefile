@@ -1,6 +1,11 @@
 OBJS = main.go
 
-run : $(OBJS)
+run: $(OBJS)
+	if ! [ -d ./databases ]; then mkdir databases; fi
+	go run $(OBJS) 
+
+test: $(OBJS)
+	if [ -d ./databases ]; then rm -r databases; fi
 	if ! [ -d ./databases ]; then mkdir databases; fi
 	go run $(OBJS) 
 
